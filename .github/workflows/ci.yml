@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  buf:
+    name: Buf Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v6.0.1
+
+      - name: Setup buf
+        uses: bufbuild/buf-action@8f4a1456a0ab6a1eb80ba68e53832e6fcfacc16c # v1.3.0
+        with:
+          setup_only: true
+
+      - name: Buf format check
+        run: |
+          buf format -d proto || {
+            echo "Proto files are not formatted. Run 'buf format -w proto' to fix."
+            exit 1
+          }
+
+      - name: Buf lint
+        run: buf lint
+
+  go:
+    name: Go Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v6.0.1
+
+      - name: Setup Go
+        uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v6.1.0
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Setup buf
+        uses: bufbuild/buf-action@8f4a1456a0ab6a1eb80ba68e53832e6fcfacc16c # v1.3.0
+        with:
+          setup_only: true
+
+      - name: Build
+        run: go build ./...
+
+      - name: Verify generated code is up to date
+        run: |
+          buf generate proto
+          go mod tidy
+          git diff --exit-code || {
+            echo "Generated code is out of date. Run 'buf generate proto && go mod tidy' to fix."
+            exit 1
+          }
