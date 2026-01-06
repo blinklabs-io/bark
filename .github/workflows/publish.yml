@@ -1,0 +1,83 @@
+name: Publish
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - v*.*.*
+
+concurrency: ${{ github.ref }}
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    name: Generate and Commit Go Code
+    runs-on: ubuntu-latest
+    if: github.ref_type == 'branch'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v6.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v6.1.0
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Setup buf
+        uses: bufbuild/buf-action@8f4a1456a0ab6a1eb80ba68e53832e6fcfacc16c # v1.3.0
+        with:
+          setup_only: true
+
+      - name: Generate Go code
+        run: buf generate proto
+
+      - name: Run go mod tidy
+        run: go mod tidy
+
+      - name: Commit generated code
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add v1alpha1/ go.mod go.sum
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: regenerate Go code"
+            git push
+          fi
+
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    if: github.ref_type == 'tag'
+    outputs:
+      RELEASE_ID: ${{ steps.create-release.outputs.result }}
+    steps:
+      - name: Set RELEASE_TAG
+        run: echo "RELEASE_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+
+      - name: Create release
+        id: create-release
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          result-encoding: string
+          script: |
+            const response = await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: process.env.RELEASE_TAG,
+              name: process.env.RELEASE_TAG,
+              generate_release_notes: true,
+              prerelease: false,
+            })
+            return response.data.id
+
+      - name: Pull new module version
+        uses: andrewslotin/go-proxy-pull-action@0ef95ea50ab6c03f2f095a5102bbdecad8fd7602 # v1.3.0

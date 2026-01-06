@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package bark.v1alpha1.archive;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/blinklabs-io/bark/v1alpha1/archive";
+
+// ArchiveService provides access to immutable blockchain data stored in cloud object storage.
+// The service returns signed URLs that allow clients to directly fetch block data from cloud
+// providers (e.g., S3, GCS) without proxying through the archive server.
+service ArchiveService {
+  // FetchBlock retrieves signed URLs for one or more blocks.
+  // The client can then use these URLs to directly download the block data from cloud storage.
+  rpc FetchBlock(FetchBlockRequest) returns (FetchBlockResponse);
+}
+
+// BlockRef identifies a block using one or more of hash, slot, or height.
+// At least one field must be specified.
+message BlockRef {
+  // Block hash as a hex-encoded string
+  optional string hash = 1;
+
+  // Slot number
+  optional uint64 slot = 2;
+
+  // Block height/number
+  optional uint64 height = 3;
+}
+
+// FetchBlockRequest requests signed URLs for one or more blocks.
+message FetchBlockRequest {
+  // List of block references to fetch
+  repeated BlockRef blocks = 1;
+}
+
+// SignedUrl contains a time-limited signed URL for downloading a block from cloud storage.
+message SignedUrl {
+  // The block this URL corresponds to
+  BlockRef block = 1;
+
+  // The signed URL for direct download from cloud storage
+  string url = 2;
+
+  // When this signed URL expires
+  google.protobuf.Timestamp expires_at = 3;
+}
+
+// FetchBlockResponse returns signed URLs for the requested blocks.
+message FetchBlockResponse {
+  // Signed URLs for successfully found blocks
+  repeated SignedUrl blocks = 1;
+
+  // Block references that were not found
+  repeated BlockRef not_found = 2;
+}
