@@ -4,7 +4,7 @@
 // 	protoc        (unknown)
 // source: v1alpha1/archive/archive.proto
 
-package archive
+package archivev1alpha1
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
@@ -276,8 +276,8 @@ const file_v1alpha1_archive_archive_proto_rawDesc = "" +
 	"\tnot_found\x18\x02 \x03(\v2\x1f.bark.v1alpha1.archive.BlockRefR\bnotFound2s\n" +
 	"\x0eArchiveService\x12a\n" +
 	"\n" +
-	"FetchBlock\x12(.bark.v1alpha1.archive.FetchBlockRequest\x1a).bark.v1alpha1.archive.FetchBlockResponseB\xce\x01\n" +
-	"\x19com.bark.v1alpha1.archiveB\fArchiveProtoP\x01Z-github.com/blinklabs-io/bark/v1alpha1/archive\xa2\x02\x03BVA\xaa\x02\x15Bark.V1alpha1.Archive\xca\x02\x15Bark\\V1alpha1\\Archive\xe2\x02!Bark\\V1alpha1\\Archive\\GPBMetadata\xea\x02\x17Bark::V1alpha1::Archiveb\x06proto3"
+	"FetchBlock\x12(.bark.v1alpha1.archive.FetchBlockRequest\x1a).bark.v1alpha1.archive.FetchBlockResponseB\xe4\x01\n" +
+	"\x19com.bark.v1alpha1.archiveB\fArchiveProtoP\x01ZCgithub.com/blinklabs-io/bark/proto/v1alpha1/archive;archivev1alpha1\xa2\x02\x03BVA\xaa\x02\x15Bark.V1alpha1.Archive\xca\x02\x15Bark\\V1alpha1\\Archive\xe2\x02!Bark\\V1alpha1\\Archive\\GPBMetadata\xea\x02\x17Bark::V1alpha1::Archiveb\x06proto3"
 
 var (
 	file_v1alpha1_archive_archive_proto_rawDescOnce sync.Once

@@ -20,9 +20,10 @@ The current implementation is the Archive Proxy protocol, which enables efficien
 ## Repository Structure
 
 ```plaintext
-proto/v1alpha1/archive/     - Protocol buffer definitions
-v1alpha1/archive/          - Generated Go code (committed to git)
-  archiveconnect/          - Generated ConnectRPC service code
+proto/v1alpha1/archive/              - Protocol buffer definitions and generated Go code
+  archive.proto                      - Protocol buffer definition
+  archive.pb.go                      - Generated protobuf Go code
+  archivev1alpha1connect/            - Generated ConnectRPC service code
 ```
 
 ## Usage
@@ -31,8 +32,8 @@ Import the generated Go code in your project:
 
 ```go
 import (
-    "github.com/blinklabs-io/bark/v1alpha1/archive"
-    "github.com/blinklabs-io/bark/v1alpha1/archive/archiveconnect"
+    archivev1alpha1 "github.com/blinklabs-io/bark/proto/v1alpha1/archive"
+    "github.com/blinklabs-io/bark/proto/v1alpha1/archive/archivev1alpha1connect"
 )
 ```
 
@@ -54,17 +55,17 @@ cd bark
 go mod download
 
 # Generate code from proto files
-buf generate proto
+buf generate
 ```
 
 ### Common Commands
 
 ```bash
 # Format proto files
-buf format -w proto
+buf format -w
 
 # Lint proto files
-buf lint proto
+buf lint
 
 # Build Go code
 go build ./...

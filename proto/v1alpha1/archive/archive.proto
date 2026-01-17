@@ -4,7 +4,7 @@ package bark.v1alpha1.archive;
 
 import "google/protobuf/timestamp.proto";
 
-option go_package = "github.com/blinklabs-io/bark/v1alpha1/archive";
+option go_package = "github.com/blinklabs-io/bark/proto/v1alpha1/archive;archivev1alpha1";
 
 // ArchiveService provides access to immutable blockchain data stored in cloud object storage.
 // The service returns signed URLs that allow clients to directly fetch block data from cloud

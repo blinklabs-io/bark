@@ -75,11 +75,11 @@ CI/CD: GitHub Actions
 ## Repository Structure
 
 ```
-proto/v1alpha1/            - Protocol buffer definitions
+proto/v1alpha1/            - Protocol buffer definitions and generated Go code
   archive/                 - Archive Proxy protocol
-v1alpha1/                  - Generated Go code (committed to git)
-  archive/                 - Generated archive module code
-    archiveconnect/        - ConnectRPC service code
+    archive.proto          - Protocol buffer definition
+    archive.pb.go          - Generated protobuf Go code
+    archivev1alpha1connect/ - Generated ConnectRPC service code
 buf.gen.yaml               - Code generation configuration
 buf.yaml                   - Buf module configuration
 ```
@@ -105,8 +105,8 @@ To import the generated code in Go:
 
 ```go
 import (
-    "github.com/blinklabs-io/bark/v1alpha1/archive"
-    "github.com/blinklabs-io/bark/v1alpha1/archive/archiveconnect"
+    archivev1alpha1 "github.com/blinklabs-io/bark/proto/v1alpha1/archive"
+    "github.com/blinklabs-io/bark/proto/v1alpha1/archive/archivev1alpha1connect"
 )
 ```
 
