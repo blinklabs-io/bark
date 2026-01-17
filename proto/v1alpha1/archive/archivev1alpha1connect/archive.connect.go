@@ -2,13 +2,13 @@
 //
 // Source: v1alpha1/archive/archive.proto
 
-package archiveconnect
+package archivev1alpha1connect
 
 import (
 	connect "connectrpc.com/connect"
 	context "context"
 	errors "errors"
-	archive "github.com/blinklabs-io/bark/v1alpha1/archive"
+	archive "github.com/blinklabs-io/bark/proto/v1alpha1/archive"
 	http "net/http"
 	strings "strings"
 )

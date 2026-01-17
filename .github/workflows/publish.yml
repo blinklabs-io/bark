@@ -35,7 +35,7 @@ jobs:
           setup_only: true
 
       - name: Generate Go code
-        run: buf generate proto
+        run: buf generate
 
       - name: Run go mod tidy
         run: go mod tidy
@@ -44,7 +44,7 @@ jobs:
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git add v1alpha1/ go.mod go.sum
+          git add proto/ go.mod go.sum
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
