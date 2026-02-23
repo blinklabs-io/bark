@@ -15,6 +15,27 @@ service ArchiveService {
   rpc FetchBlock(FetchBlockRequest) returns (FetchBlockResponse);
 }
 
+// BlockType indicates what era the block was created
+enum BlockType {
+  BLOCK_TYPE_BYRON_EBB_UNSPECIFIED = 0;
+  BLOCK_TYPE_BYRON_MAIN = 1;
+  BLOCK_TYPE_SHELLEY = 2;
+  BLOCK_TYPE_ALLEGRA = 3;
+  BLOCK_TYPE_MARY = 4;
+  BLOCK_TYPE_ALONZO = 5;
+  BLOCK_TYPE_BABBAGE = 6;
+  BLOCK_TYPE_CONWAY = 7;
+}
+
+// BlockMeta includes additional block information
+message BlockMeta {
+  // Block type
+  optional BlockType type = 1;
+
+  // Previous block hash as a hex-encoded string
+  optional string prev_hash = 2;
+}
+
 // BlockRef identifies a block using one or more of hash, slot, or height.
 // At least one field must be specified.
 message BlockRef {
@@ -44,6 +65,9 @@ message SignedUrl {
 
   // When this signed URL expires
   google.protobuf.Timestamp expires_at = 3;
+
+  // Additional metadata about this block
+  BlockMeta meta = 4;
 }
 
 // FetchBlockResponse returns signed URLs for the requested blocks.

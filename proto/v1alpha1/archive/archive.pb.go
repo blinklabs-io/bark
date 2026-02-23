@@ -22,6 +22,126 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// BlockType indicates what era the block was created
+type BlockType int32
+
+const (
+	BlockType_BLOCK_TYPE_BYRON_EBB_UNSPECIFIED BlockType = 0
+	BlockType_BLOCK_TYPE_BYRON_MAIN            BlockType = 1
+	BlockType_BLOCK_TYPE_SHELLEY               BlockType = 2
+	BlockType_BLOCK_TYPE_ALLEGRA               BlockType = 3
+	BlockType_BLOCK_TYPE_MARY                  BlockType = 4
+	BlockType_BLOCK_TYPE_ALONZO                BlockType = 5
+	BlockType_BLOCK_TYPE_BABBAGE               BlockType = 6
+	BlockType_BLOCK_TYPE_CONWAY                BlockType = 7
+)
+
+// Enum value maps for BlockType.
+var (
+	BlockType_name = map[int32]string{
+		0: "BLOCK_TYPE_BYRON_EBB_UNSPECIFIED",
+		1: "BLOCK_TYPE_BYRON_MAIN",
+		2: "BLOCK_TYPE_SHELLEY",
+		3: "BLOCK_TYPE_ALLEGRA",
+		4: "BLOCK_TYPE_MARY",
+		5: "BLOCK_TYPE_ALONZO",
+		6: "BLOCK_TYPE_BABBAGE",
+		7: "BLOCK_TYPE_CONWAY",
+	}
+	BlockType_value = map[string]int32{
+		"BLOCK_TYPE_BYRON_EBB_UNSPECIFIED": 0,
+		"BLOCK_TYPE_BYRON_MAIN":            1,
+		"BLOCK_TYPE_SHELLEY":               2,
+		"BLOCK_TYPE_ALLEGRA":               3,
+		"BLOCK_TYPE_MARY":                  4,
+		"BLOCK_TYPE_ALONZO":                5,
+		"BLOCK_TYPE_BABBAGE":               6,
+		"BLOCK_TYPE_CONWAY":                7,
+	}
+)
+
+func (x BlockType) Enum() *BlockType {
+	p := new(BlockType)
+	*p = x
+	return p
+}
+
+func (x BlockType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (BlockType) Descriptor() protoreflect.EnumDescriptor {
+	return file_v1alpha1_archive_archive_proto_enumTypes[0].Descriptor()
+}
+
+func (BlockType) Type() protoreflect.EnumType {
+	return &file_v1alpha1_archive_archive_proto_enumTypes[0]
+}
+
+func (x BlockType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use BlockType.Descriptor instead.
+func (BlockType) EnumDescriptor() ([]byte, []int) {
+	return file_v1alpha1_archive_archive_proto_rawDescGZIP(), []int{0}
+}
+
+// BlockMeta includes additional block information
+type BlockMeta struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Block type
+	Type *BlockType `protobuf:"varint,1,opt,name=type,proto3,enum=bark.v1alpha1.archive.BlockType,oneof" json:"type,omitempty"`
+	// Previous block hash as a hex-encoded string
+	PrevHash      *string `protobuf:"bytes,2,opt,name=prev_hash,json=prevHash,proto3,oneof" json:"prev_hash,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BlockMeta) Reset() {
+	*x = BlockMeta{}
+	mi := &file_v1alpha1_archive_archive_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BlockMeta) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BlockMeta) ProtoMessage() {}
+
+func (x *BlockMeta) ProtoReflect() protoreflect.Message {
+	mi := &file_v1alpha1_archive_archive_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BlockMeta.ProtoReflect.Descriptor instead.
+func (*BlockMeta) Descriptor() ([]byte, []int) {
+	return file_v1alpha1_archive_archive_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *BlockMeta) GetType() BlockType {
+	if x != nil && x.Type != nil {
+		return *x.Type
+	}
+	return BlockType_BLOCK_TYPE_BYRON_EBB_UNSPECIFIED
+}
+
+func (x *BlockMeta) GetPrevHash() string {
+	if x != nil && x.PrevHash != nil {
+		return *x.PrevHash
+	}
+	return ""
+}
+
 // BlockRef identifies a block using one or more of hash, slot, or height.
 // At least one field must be specified.
 type BlockRef struct {
@@ -38,7 +158,7 @@ type BlockRef struct {
 
 func (x *BlockRef) Reset() {
 	*x = BlockRef{}
-	mi := &file_v1alpha1_archive_archive_proto_msgTypes[0]
+	mi := &file_v1alpha1_archive_archive_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -50,7 +170,7 @@ func (x *BlockRef) String() string {
 func (*BlockRef) ProtoMessage() {}
 
 func (x *BlockRef) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_archive_archive_proto_msgTypes[0]
+	mi := &file_v1alpha1_archive_archive_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -63,7 +183,7 @@ func (x *BlockRef) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BlockRef.ProtoReflect.Descriptor instead.
 func (*BlockRef) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_archive_archive_proto_rawDescGZIP(), []int{0}
+	return file_v1alpha1_archive_archive_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *BlockRef) GetHash() string {
@@ -98,7 +218,7 @@ type FetchBlockRequest struct {
 
 func (x *FetchBlockRequest) Reset() {
 	*x = FetchBlockRequest{}
-	mi := &file_v1alpha1_archive_archive_proto_msgTypes[1]
+	mi := &file_v1alpha1_archive_archive_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -110,7 +230,7 @@ func (x *FetchBlockRequest) String() string {
 func (*FetchBlockRequest) ProtoMessage() {}
 
 func (x *FetchBlockRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_archive_archive_proto_msgTypes[1]
+	mi := &file_v1alpha1_archive_archive_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -123,7 +243,7 @@ func (x *FetchBlockRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FetchBlockRequest.ProtoReflect.Descriptor instead.
 func (*FetchBlockRequest) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_archive_archive_proto_rawDescGZIP(), []int{1}
+	return file_v1alpha1_archive_archive_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *FetchBlockRequest) GetBlocks() []*BlockRef {
@@ -141,14 +261,16 @@ type SignedUrl struct {
 	// The signed URL for direct download from cloud storage
 	Url string `protobuf:"bytes,2,opt,name=url,proto3" json:"url,omitempty"`
 	// When this signed URL expires
-	ExpiresAt     *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	ExpiresAt *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	// Additional metadata about this block
+	Meta          *BlockMeta `protobuf:"bytes,4,opt,name=meta,proto3" json:"meta,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *SignedUrl) Reset() {
 	*x = SignedUrl{}
-	mi := &file_v1alpha1_archive_archive_proto_msgTypes[2]
+	mi := &file_v1alpha1_archive_archive_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -160,7 +282,7 @@ func (x *SignedUrl) String() string {
 func (*SignedUrl) ProtoMessage() {}
 
 func (x *SignedUrl) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_archive_archive_proto_msgTypes[2]
+	mi := &file_v1alpha1_archive_archive_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -173,7 +295,7 @@ func (x *SignedUrl) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SignedUrl.ProtoReflect.Descriptor instead.
 func (*SignedUrl) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_archive_archive_proto_rawDescGZIP(), []int{2}
+	return file_v1alpha1_archive_archive_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *SignedUrl) GetBlock() *BlockRef {
@@ -197,6 +319,13 @@ func (x *SignedUrl) GetExpiresAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *SignedUrl) GetMeta() *BlockMeta {
+	if x != nil {
+		return x.Meta
+	}
+	return nil
+}
+
 // FetchBlockResponse returns signed URLs for the requested blocks.
 type FetchBlockResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -210,7 +339,7 @@ type FetchBlockResponse struct {
 
 func (x *FetchBlockResponse) Reset() {
 	*x = FetchBlockResponse{}
-	mi := &file_v1alpha1_archive_archive_proto_msgTypes[3]
+	mi := &file_v1alpha1_archive_archive_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -222,7 +351,7 @@ func (x *FetchBlockResponse) String() string {
 func (*FetchBlockResponse) ProtoMessage() {}
 
 func (x *FetchBlockResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_archive_archive_proto_msgTypes[3]
+	mi := &file_v1alpha1_archive_archive_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -235,7 +364,7 @@ func (x *FetchBlockResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FetchBlockResponse.ProtoReflect.Descriptor instead.
 func (*FetchBlockResponse) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_archive_archive_proto_rawDescGZIP(), []int{3}
+	return file_v1alpha1_archive_archive_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *FetchBlockResponse) GetBlocks() []*SignedUrl {
@@ -256,7 +385,13 @@ var File_v1alpha1_archive_archive_proto protoreflect.FileDescriptor
 
 const file_v1alpha1_archive_archive_proto_rawDesc = "" +
 	"\n" +
-	"\x1ev1alpha1/archive/archive.proto\x12\x15bark.v1alpha1.archive\x1a\x1fgoogle/protobuf/timestamp.proto\"v\n" +
+	"\x1ev1alpha1/archive/archive.proto\x12\x15bark.v1alpha1.archive\x1a\x1fgoogle/protobuf/timestamp.proto\"\x7f\n" +
+	"\tBlockMeta\x129\n" +
+	"\x04type\x18\x01 \x01(\x0e2 .bark.v1alpha1.archive.BlockTypeH\x00R\x04type\x88\x01\x01\x12 \n" +
+	"\tprev_hash\x18\x02 \x01(\tH\x01R\bprevHash\x88\x01\x01B\a\n" +
+	"\x05_typeB\f\n" +
+	"\n" +
+	"_prev_hash\"v\n" +
 	"\bBlockRef\x12\x17\n" +
 	"\x04hash\x18\x01 \x01(\tH\x00R\x04hash\x88\x01\x01\x12\x17\n" +
 	"\x04slot\x18\x02 \x01(\x04H\x01R\x04slot\x88\x01\x01\x12\x1b\n" +
@@ -265,15 +400,25 @@ const file_v1alpha1_archive_archive_proto_rawDesc = "" +
 	"\x05_slotB\t\n" +
 	"\a_height\"L\n" +
 	"\x11FetchBlockRequest\x127\n" +
-	"\x06blocks\x18\x01 \x03(\v2\x1f.bark.v1alpha1.archive.BlockRefR\x06blocks\"\x8f\x01\n" +
+	"\x06blocks\x18\x01 \x03(\v2\x1f.bark.v1alpha1.archive.BlockRefR\x06blocks\"\xc5\x01\n" +
 	"\tSignedUrl\x125\n" +
 	"\x05block\x18\x01 \x01(\v2\x1f.bark.v1alpha1.archive.BlockRefR\x05block\x12\x10\n" +
 	"\x03url\x18\x02 \x01(\tR\x03url\x129\n" +
 	"\n" +
-	"expires_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\"\x8c\x01\n" +
+	"expires_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\x124\n" +
+	"\x04meta\x18\x04 \x01(\v2 .bark.v1alpha1.archive.BlockMetaR\x04meta\"\x8c\x01\n" +
 	"\x12FetchBlockResponse\x128\n" +
 	"\x06blocks\x18\x01 \x03(\v2 .bark.v1alpha1.archive.SignedUrlR\x06blocks\x12<\n" +
-	"\tnot_found\x18\x02 \x03(\v2\x1f.bark.v1alpha1.archive.BlockRefR\bnotFound2s\n" +
+	"\tnot_found\x18\x02 \x03(\v2\x1f.bark.v1alpha1.archive.BlockRefR\bnotFound*\xd7\x01\n" +
+	"\tBlockType\x12$\n" +
+	" BLOCK_TYPE_BYRON_EBB_UNSPECIFIED\x10\x00\x12\x19\n" +
+	"\x15BLOCK_TYPE_BYRON_MAIN\x10\x01\x12\x16\n" +
+	"\x12BLOCK_TYPE_SHELLEY\x10\x02\x12\x16\n" +
+	"\x12BLOCK_TYPE_ALLEGRA\x10\x03\x12\x13\n" +
+	"\x0fBLOCK_TYPE_MARY\x10\x04\x12\x15\n" +
+	"\x11BLOCK_TYPE_ALONZO\x10\x05\x12\x16\n" +
+	"\x12BLOCK_TYPE_BABBAGE\x10\x06\x12\x15\n" +
+	"\x11BLOCK_TYPE_CONWAY\x10\a2s\n" +
 	"\x0eArchiveService\x12a\n" +
 	"\n" +
 	"FetchBlock\x12(.bark.v1alpha1.archive.FetchBlockRequest\x1a).bark.v1alpha1.archive.FetchBlockResponseB\xe4\x01\n" +
@@ -291,27 +436,32 @@ func file_v1alpha1_archive_archive_proto_rawDescGZIP() []byte {
 	return file_v1alpha1_archive_archive_proto_rawDescData
 }
 
-var file_v1alpha1_archive_archive_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_v1alpha1_archive_archive_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_v1alpha1_archive_archive_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_v1alpha1_archive_archive_proto_goTypes = []any{
-	(*BlockRef)(nil),              // 0: bark.v1alpha1.archive.BlockRef
-	(*FetchBlockRequest)(nil),     // 1: bark.v1alpha1.archive.FetchBlockRequest
-	(*SignedUrl)(nil),             // 2: bark.v1alpha1.archive.SignedUrl
-	(*FetchBlockResponse)(nil),    // 3: bark.v1alpha1.archive.FetchBlockResponse
-	(*timestamppb.Timestamp)(nil), // 4: google.protobuf.Timestamp
+	(BlockType)(0),                // 0: bark.v1alpha1.archive.BlockType
+	(*BlockMeta)(nil),             // 1: bark.v1alpha1.archive.BlockMeta
+	(*BlockRef)(nil),              // 2: bark.v1alpha1.archive.BlockRef
+	(*FetchBlockRequest)(nil),     // 3: bark.v1alpha1.archive.FetchBlockRequest
+	(*SignedUrl)(nil),             // 4: bark.v1alpha1.archive.SignedUrl
+	(*FetchBlockResponse)(nil),    // 5: bark.v1alpha1.archive.FetchBlockResponse
+	(*timestamppb.Timestamp)(nil), // 6: google.protobuf.Timestamp
 }
 var file_v1alpha1_archive_archive_proto_depIdxs = []int32{
-	0, // 0: bark.v1alpha1.archive.FetchBlockRequest.blocks:type_name -> bark.v1alpha1.archive.BlockRef
-	0, // 1: bark.v1alpha1.archive.SignedUrl.block:type_name -> bark.v1alpha1.archive.BlockRef
-	4, // 2: bark.v1alpha1.archive.SignedUrl.expires_at:type_name -> google.protobuf.Timestamp
-	2, // 3: bark.v1alpha1.archive.FetchBlockResponse.blocks:type_name -> bark.v1alpha1.archive.SignedUrl
-	0, // 4: bark.v1alpha1.archive.FetchBlockResponse.not_found:type_name -> bark.v1alpha1.archive.BlockRef
-	1, // 5: bark.v1alpha1.archive.ArchiveService.FetchBlock:input_type -> bark.v1alpha1.archive.FetchBlockRequest
-	3, // 6: bark.v1alpha1.archive.ArchiveService.FetchBlock:output_type -> bark.v1alpha1.archive.FetchBlockResponse
-	6, // [6:7] is the sub-list for method output_type
-	5, // [5:6] is the sub-list for method input_type
-	5, // [5:5] is the sub-list for extension type_name
-	5, // [5:5] is the sub-list for extension extendee
-	0, // [0:5] is the sub-list for field type_name
+	0, // 0: bark.v1alpha1.archive.BlockMeta.type:type_name -> bark.v1alpha1.archive.BlockType
+	2, // 1: bark.v1alpha1.archive.FetchBlockRequest.blocks:type_name -> bark.v1alpha1.archive.BlockRef
+	2, // 2: bark.v1alpha1.archive.SignedUrl.block:type_name -> bark.v1alpha1.archive.BlockRef
+	6, // 3: bark.v1alpha1.archive.SignedUrl.expires_at:type_name -> google.protobuf.Timestamp
+	1, // 4: bark.v1alpha1.archive.SignedUrl.meta:type_name -> bark.v1alpha1.archive.BlockMeta
+	4, // 5: bark.v1alpha1.archive.FetchBlockResponse.blocks:type_name -> bark.v1alpha1.archive.SignedUrl
+	2, // 6: bark.v1alpha1.archive.FetchBlockResponse.not_found:type_name -> bark.v1alpha1.archive.BlockRef
+	3, // 7: bark.v1alpha1.archive.ArchiveService.FetchBlock:input_type -> bark.v1alpha1.archive.FetchBlockRequest
+	5, // 8: bark.v1alpha1.archive.ArchiveService.FetchBlock:output_type -> bark.v1alpha1.archive.FetchBlockResponse
+	8, // [8:9] is the sub-list for method output_type
+	7, // [7:8] is the sub-list for method input_type
+	7, // [7:7] is the sub-list for extension type_name
+	7, // [7:7] is the sub-list for extension extendee
+	0, // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_v1alpha1_archive_archive_proto_init() }
@@ -320,18 +470,20 @@ func file_v1alpha1_archive_archive_proto_init() {
 		return
 	}
 	file_v1alpha1_archive_archive_proto_msgTypes[0].OneofWrappers = []any{}
+	file_v1alpha1_archive_archive_proto_msgTypes[1].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1alpha1_archive_archive_proto_rawDesc), len(file_v1alpha1_archive_archive_proto_rawDesc)),
-			NumEnums:      0,
-			NumMessages:   4,
+			NumEnums:      1,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_v1alpha1_archive_archive_proto_goTypes,
 		DependencyIndexes: file_v1alpha1_archive_archive_proto_depIdxs,
+		EnumInfos:         file_v1alpha1_archive_archive_proto_enumTypes,
 		MessageInfos:      file_v1alpha1_archive_archive_proto_msgTypes,
 	}.Build()
 	File_v1alpha1_archive_archive_proto = out.File
