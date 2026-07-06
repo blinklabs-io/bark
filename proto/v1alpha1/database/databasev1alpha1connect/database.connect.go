@@ -95,9 +95,12 @@ type DatabaseServiceClient interface {
 	// ListAvailableSnapshots returns snapshots eligible for restoration,
 	// including those on remote object storage.
 	ListAvailableSnapshots(context.Context, *connect.Request[database.ListAvailableSnapshotsRequest]) (*connect.Response[database.ListAvailableSnapshotsResponse], error)
-	// Truncate begins an async truncation of the chain. The target block is
-	// preserved and becomes the new chain tip; only blocks with a strictly
-	// greater slot or block number are removed.
+	// Truncate begins an async truncation of the chain. This is the
+	// network-triggerable form of the db-truncator capability described in
+	// CIP-0135 (Disaster Recovery Plan for Cardano Networks). The target block
+	// is preserved and becomes the new chain tip; only blocks with a strictly
+	// greater slot or block number are removed. On completion the database is
+	// resync-ready against the main network.
 	Truncate(context.Context, *connect.Request[database.TruncateRequest]) (*connect.Response[database.TruncateResponse], error)
 	// GetTruncateStatus returns the progress of a truncate operation.
 	GetTruncateStatus(context.Context, *connect.Request[database.GetTruncateStatusRequest]) (*connect.Response[database.GetTruncateStatusResponse], error)
@@ -318,9 +321,12 @@ type DatabaseServiceHandler interface {
 	// ListAvailableSnapshots returns snapshots eligible for restoration,
 	// including those on remote object storage.
 	ListAvailableSnapshots(context.Context, *connect.Request[database.ListAvailableSnapshotsRequest]) (*connect.Response[database.ListAvailableSnapshotsResponse], error)
-	// Truncate begins an async truncation of the chain. The target block is
-	// preserved and becomes the new chain tip; only blocks with a strictly
-	// greater slot or block number are removed.
+	// Truncate begins an async truncation of the chain. This is the
+	// network-triggerable form of the db-truncator capability described in
+	// CIP-0135 (Disaster Recovery Plan for Cardano Networks). The target block
+	// is preserved and becomes the new chain tip; only blocks with a strictly
+	// greater slot or block number are removed. On completion the database is
+	// resync-ready against the main network.
 	Truncate(context.Context, *connect.Request[database.TruncateRequest]) (*connect.Response[database.TruncateResponse], error)
 	// GetTruncateStatus returns the progress of a truncate operation.
 	GetTruncateStatus(context.Context, *connect.Request[database.GetTruncateStatusRequest]) (*connect.Response[database.GetTruncateStatusResponse], error)
