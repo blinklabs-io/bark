@@ -1,0 +1,347 @@
+syntax = "proto3";
+
+package bark.v1alpha1.database;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/blinklabs-io/bark/proto/v1alpha1/database;databasev1alpha1";
+
+// DatabaseService manages the database lifecycle: snapshots, restores, and
+// truncation. Only one operation may run at a time; concurrent requests are
+// rejected with FAILED_PRECONDITION.
+service DatabaseService {
+  // CreateSnapshot begins an async snapshot of the current database state.
+  rpc CreateSnapshot(CreateSnapshotRequest) returns (CreateSnapshotResponse);
+
+  // GetSnapshotStatus returns the progress of a snapshot operation.
+  rpc GetSnapshotStatus(GetSnapshotStatusRequest) returns (GetSnapshotStatusResponse);
+
+  // ListSnapshots returns all stored snapshots.
+  rpc ListSnapshots(ListSnapshotsRequest) returns (ListSnapshotsResponse);
+
+  // DeleteSnapshot removes a stored snapshot.
+  rpc DeleteSnapshot(DeleteSnapshotRequest) returns (DeleteSnapshotResponse);
+
+  // VerifySnapshot begins an async integrity check of a stored snapshot.
+  rpc VerifySnapshot(VerifySnapshotRequest) returns (VerifySnapshotResponse);
+
+  // Restore begins an async restoration of the database from a snapshot.
+  rpc Restore(RestoreRequest) returns (RestoreResponse);
+
+  // GetRestoreStatus returns the progress of a restore operation.
+  rpc GetRestoreStatus(GetRestoreStatusRequest) returns (GetRestoreStatusResponse);
+
+  // ListAvailableSnapshots returns snapshots eligible for restoration,
+  // including those on remote object storage.
+  rpc ListAvailableSnapshots(ListAvailableSnapshotsRequest) returns (ListAvailableSnapshotsResponse);
+
+  // Truncate begins an async truncation of the chain. The target block is
+  // preserved and becomes the new chain tip; only blocks with a strictly
+  // greater slot or block number are removed.
+  rpc Truncate(TruncateRequest) returns (TruncateResponse);
+
+  // GetTruncateStatus returns the progress of a truncate operation.
+  rpc GetTruncateStatus(GetTruncateStatusRequest) returns (GetTruncateStatusResponse);
+
+  // StreamOperationProgress streams live progress updates for a running
+  // operation until it completes or is cancelled.
+  rpc StreamOperationProgress(StreamOperationProgressRequest) returns (stream StreamOperationProgressResponse);
+
+  // GetOperationHistory returns a log of past operations.
+  rpc GetOperationHistory(GetOperationHistoryRequest) returns (GetOperationHistoryResponse);
+
+  // GetDatabaseInfo returns current database metrics and state.
+  rpc GetDatabaseInfo(GetDatabaseInfoRequest) returns (GetDatabaseInfoResponse);
+
+  // CancelOperation requests cancellation of a running operation.
+  rpc CancelOperation(CancelOperationRequest) returns (CancelOperationResponse);
+}
+
+// OperationStatus describes the lifecycle state of an async operation.
+enum OperationStatus {
+  OPERATION_STATUS_UNSPECIFIED = 0;
+  OPERATION_STATUS_PENDING = 1;
+  OPERATION_STATUS_RUNNING = 2;
+  OPERATION_STATUS_COMPLETED = 3;
+  OPERATION_STATUS_FAILED = 4;
+  OPERATION_STATUS_CANCELLED = 5;
+}
+
+// OperationType identifies which kind of operation a record refers to.
+enum OperationType {
+  OPERATION_TYPE_UNSPECIFIED = 0;
+  OPERATION_TYPE_SNAPSHOT = 1;
+  OPERATION_TYPE_RESTORE = 2;
+  OPERATION_TYPE_TRUNCATE = 3;
+  OPERATION_TYPE_VERIFY = 4;
+}
+
+// BlockRef identifies a block by one or more of hash, slot, or block number.
+// At least one field must be set. When multiple fields are set, all must
+// agree; the server returns INVALID_ARGUMENT if they are inconsistent.
+message BlockRef {
+  // Block hash as a hex-encoded string.
+  optional string hash = 1;
+
+  // Slot number.
+  optional uint64 slot = 2;
+
+  // Block number / height.
+  optional uint64 block_number = 3;
+}
+
+// OperationProgress reports the current state of an async operation.
+message OperationProgress {
+  // Unique operation identifier.
+  string operation_id = 1;
+
+  // Current lifecycle state.
+  OperationStatus status = 2;
+
+  // Completion percentage in [0.0, 100.0].
+  float progress_percent = 3;
+
+  // Human-readable status message.
+  string message = 4;
+
+  // When the operation was created.
+  google.protobuf.Timestamp started_at = 5;
+
+  // When this progress record was produced.
+  google.protobuf.Timestamp updated_at = 6;
+
+  // When the operation reached a terminal state, if it has.
+  optional google.protobuf.Timestamp completed_at = 7;
+}
+
+// OperationRecord is a summary entry in the operation history log.
+message OperationRecord {
+  // Unique operation identifier.
+  string operation_id = 1;
+
+  // Kind of operation.
+  OperationType type = 2;
+
+  // Terminal state of the operation.
+  OperationStatus status = 3;
+
+  // Human-readable description or error message.
+  string message = 4;
+
+  // When the operation started.
+  google.protobuf.Timestamp started_at = 5;
+
+  // When the operation reached a terminal state.
+  optional google.protobuf.Timestamp completed_at = 6;
+}
+
+// SnapshotInfo describes a stored snapshot.
+message SnapshotInfo {
+  // Unique snapshot identifier.
+  string snapshot_id = 1;
+
+  // Human-readable name given at creation time.
+  string name = 2;
+
+  // Optional description.
+  string description = 3;
+
+  // Chain tip at the time the snapshot was taken.
+  BlockRef tip = 4;
+
+  // Total size in bytes.
+  uint64 size_bytes = 5;
+
+  // Content checksum (format: "<algorithm>:<hex>", e.g. "sha256:abc123").
+  string checksum = 6;
+
+  // When the snapshot was created.
+  google.protobuf.Timestamp created_at = 7;
+
+  // Storage location of the snapshot (local path or remote URI).
+  string location = 8;
+}
+
+// ─── Snapshot RPCs ────────────────────────────────────────────────────────────
+
+message CreateSnapshotRequest {
+  // Human-readable label for this snapshot.
+  string name = 1;
+
+  // Optional free-form description.
+  string description = 2;
+}
+
+message CreateSnapshotResponse {
+  // Identifier for tracking this operation.
+  string operation_id = 1;
+
+  // Identifier for the snapshot being created (available before completion).
+  string snapshot_id = 2;
+}
+
+message GetSnapshotStatusRequest {
+  string operation_id = 1;
+}
+
+message GetSnapshotStatusResponse {
+  // Current progress of the snapshot operation.
+  OperationProgress progress = 1;
+
+  // Snapshot identifier (populated once the snapshot is committed).
+  string snapshot_id = 2;
+}
+
+message ListSnapshotsRequest {
+  // Maximum number of results to return. 0 means server default.
+  uint32 page_size = 1;
+
+  // Opaque token from a previous response for pagination.
+  string page_token = 2;
+}
+
+message ListSnapshotsResponse {
+  repeated SnapshotInfo snapshots = 1;
+
+  // Token to retrieve the next page, empty when no further pages exist.
+  string next_page_token = 2;
+}
+
+message DeleteSnapshotRequest {
+  string snapshot_id = 1;
+}
+
+message DeleteSnapshotResponse {
+  // When the snapshot was removed.
+  google.protobuf.Timestamp deleted_at = 1;
+}
+
+message VerifySnapshotRequest {
+  string snapshot_id = 1;
+}
+
+message VerifySnapshotResponse {
+  // Identifier for tracking this verify operation.
+  string operation_id = 1;
+}
+
+// ─── Restore RPCs ─────────────────────────────────────────────────────────────
+
+message RestoreRequest {
+  // Snapshot to restore from.
+  string snapshot_id = 1;
+}
+
+message RestoreResponse {
+  // Identifier for tracking this operation.
+  string operation_id = 1;
+}
+
+message GetRestoreStatusRequest {
+  string operation_id = 1;
+}
+
+message GetRestoreStatusResponse {
+  OperationProgress progress = 1;
+}
+
+message ListAvailableSnapshotsRequest {
+  // Maximum number of results to return. 0 means server default.
+  uint32 page_size = 1;
+
+  // Opaque token from a previous response for pagination.
+  string page_token = 2;
+}
+
+message ListAvailableSnapshotsResponse {
+  // Includes local snapshots and those discoverable on remote object storage.
+  repeated SnapshotInfo snapshots = 1;
+
+  string next_page_token = 2;
+}
+
+// ─── Truncate RPCs ────────────────────────────────────────────────────────────
+
+message TruncateRequest {
+  // The block to retain as the new chain tip. Blocks with a strictly greater
+  // slot or block number are removed. At least one field of target must be set,
+  // and hash, slot, and block_number must identify the same block when combined.
+  BlockRef target = 1;
+}
+
+message TruncateResponse {
+  // Identifier for tracking this operation.
+  string operation_id = 1;
+}
+
+message GetTruncateStatusRequest {
+  string operation_id = 1;
+}
+
+message GetTruncateStatusResponse {
+  OperationProgress progress = 1;
+
+  // Number of blocks removed once the operation completes.
+  uint64 blocks_removed = 2;
+}
+
+// ─── Shared RPCs ──────────────────────────────────────────────────────────────
+
+message StreamOperationProgressRequest {
+  string operation_id = 1;
+}
+
+message StreamOperationProgressResponse {
+  OperationProgress progress = 1;
+}
+
+message GetOperationHistoryRequest {
+  // Filter by operation type. Omit to return all types.
+  optional OperationType type_filter = 1;
+
+  // Filter by status. Omit to return all statuses.
+  optional OperationStatus status_filter = 2;
+
+  // Maximum number of records to return. 0 means server default.
+  uint32 page_size = 3;
+
+  // Opaque token from a previous response for pagination.
+  string page_token = 4;
+}
+
+message GetOperationHistoryResponse {
+  repeated OperationRecord records = 1;
+
+  string next_page_token = 2;
+}
+
+message GetDatabaseInfoRequest {}
+
+message GetDatabaseInfoResponse {
+  // Current chain tip.
+  BlockRef tip = 1;
+
+  // Total number of blocks stored.
+  uint64 block_count = 2;
+
+  // Total on-disk size in bytes across all storage backends.
+  uint64 size_bytes = 3;
+
+  // Slot of the oldest block retained.
+  uint64 oldest_slot = 4;
+
+  // Whether a database operation is currently running.
+  bool operation_in_progress = 5;
+
+  // Operation ID of any currently running operation.
+  optional string current_operation_id = 6;
+}
+
+message CancelOperationRequest {
+  string operation_id = 1;
+}
+
+message CancelOperationResponse {
+  // Status of the operation at the time the cancellation was accepted.
+  OperationStatus status = 1;
+}
