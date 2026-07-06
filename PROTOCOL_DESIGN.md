@@ -5,7 +5,7 @@ The Bark protocol is a gRPC-based communication protocol for Dingo blockchain no
 
 Bark enables Dingo-to-Dingo communication for managing and operating Dingo instances. The protocol is designed with a modular, extensible architecture to support various operational aspects as they become needed.
 
-The current implementation is the Archive Proxy protocol, which enables efficient retrieval of immutable blockchain data via signed URLs to cloud object storage.
+The current protocol definitions cover the Archive Proxy and Database Service. Runtime server and operator implementations live in Dingo.
 
 ## Goals
 - Dingo-to-Dingo Communication: Enable management and operation of Dingo instances
@@ -54,6 +54,64 @@ Messages:
 Optional mutual TLS support for client-server authentication
 
 
+## Database Service Protocol (v1alpha1)
+
+The Database Service provides a unified interface for database lifecycle management: snapshots, restoration, and chain truncation. Only one operation may run at a time; concurrent requests are rejected.
+
+### Architecture
+
+Server: Dingo instance exposing database management operations
+Client: dingoctl or another Dingo instance acting as operator
+
+### Protocol Definition
+
+Location: `proto/v1alpha1/database/database.proto`
+
+Service: DatabaseService
+
+Snapshot operations:
+- CreateSnapshot(CreateSnapshotRequest) returns (CreateSnapshotResponse)
+- GetSnapshotStatus(GetSnapshotStatusRequest) returns (GetSnapshotStatusResponse)
+- ListSnapshots(ListSnapshotsRequest) returns (ListSnapshotsResponse)
+- DeleteSnapshot(DeleteSnapshotRequest) returns (DeleteSnapshotResponse)
+- VerifySnapshot(VerifySnapshotRequest) returns (VerifySnapshotResponse)
+
+Restore operations:
+- Restore(RestoreRequest) returns (RestoreResponse)
+- GetRestoreStatus(GetRestoreStatusRequest) returns (GetRestoreStatusResponse)
+- ListAvailableSnapshots(ListAvailableSnapshotsRequest) returns (ListAvailableSnapshotsResponse)
+
+Truncate operations:
+- Truncate(TruncateRequest) returns (TruncateResponse)
+- GetTruncateStatus(GetTruncateStatusRequest) returns (GetTruncateStatusResponse)
+
+Shared operations:
+- StreamOperationProgress(StreamOperationProgressRequest) returns (stream StreamOperationProgressResponse)
+- GetOperationHistory(GetOperationHistoryRequest) returns (GetOperationHistoryResponse)
+- GetDatabaseInfo(GetDatabaseInfoRequest) returns (GetDatabaseInfoResponse)
+- CancelOperation(CancelOperationRequest) returns (CancelOperationResponse)
+
+Key messages:
+- BlockRef: Identifies a block by hash, slot, and/or block number
+- OperationProgress: Tracks status, percent complete, and timestamps for an async operation
+- OperationRecord: Summary entry in the history log
+- SnapshotInfo: Metadata for a stored snapshot (id, name, tip, size, checksum, location)
+
+### Truncate Semantics
+
+The target block passed to Truncate is preserved and becomes the new chain tip. Only blocks with a strictly greater slot or block number are removed. The target may be identified by hash, slot, or block number; all supplied fields must be consistent.
+
+### Mutual Exclusion
+
+Only one of snapshot, restore, truncate, or verify may run at a time. A second request while an operation is in progress returns `FAILED_PRECONDITION`. Use `CancelOperation` to abort a running operation before starting another.
+
+### Benefits
+
+- Async operations with streamable progress (no client timeout risk on long-running jobs)
+- Queryable history for operator auditing
+- Remote object storage support for snapshots (S3, GCS, etc.)
+- Clear cancellation and error semantics
+
 ## Versioning
 
 Package naming: `bark.v1alpha1.{module}`
@@ -75,28 +133,33 @@ CI/CD: GitHub Actions
 ## Repository Structure
 
 ```
-proto/v1alpha1/            - Protocol buffer definitions and generated Go code
-  archive/                 - Archive Proxy protocol
-    archive.proto          - Protocol buffer definition
-    archive.pb.go          - Generated protobuf Go code
-    archivev1alpha1connect/ - Generated ConnectRPC service code
-buf.gen.yaml               - Code generation configuration
-buf.yaml                   - Buf module configuration
+proto/v1alpha1/              - Protocol buffer definitions and generated Go code
+  archive/                   - Archive Proxy protocol
+    archive.proto            - Protocol buffer definition
+    archive.pb.go            - Generated protobuf Go code
+    archivev1alpha1connect/  - Generated ConnectRPC service code
+  database/                  - Database Service protocol
+    database.proto           - Protocol buffer definition
+    database.pb.go           - Generated protobuf Go code
+    databasev1alpha1connect/ - Generated ConnectRPC service code
+buf.gen.yaml                 - Code generation configuration
+buf.yaml                     - Buf module configuration
 ```
 
 ## Implementation Status
 
 Completed:
 - Protocol buffer definition for Archive Proxy (proto/v1alpha1/archive/archive.proto)
+- Protocol buffer definition for Database Service (proto/v1alpha1/database/database.proto)
 - Buf configuration and code generation setup
 - Go module with ConnectRPC dependencies
-- Generated Go code for v1alpha1 archive module
+- Generated Go code for v1alpha1 archive and database modules
 - CI/CD pipelines for linting, testing, and dependency management
 - Conventional commit enforcement
 
 In Progress:
-- Server implementation in Dingo
-- Client implementation in Dingo
+- Server implementation in Dingo (archive and database services)
+- Client implementation in Dingo / dingoctl
 - Integration testing
 
 ## Usage
@@ -107,6 +170,9 @@ To import the generated code in Go:
 import (
     archivev1alpha1 "github.com/blinklabs-io/bark/proto/v1alpha1/archive"
     "github.com/blinklabs-io/bark/proto/v1alpha1/archive/archivev1alpha1connect"
+
+    databasev1alpha1 "github.com/blinklabs-io/bark/proto/v1alpha1/database"
+    "github.com/blinklabs-io/bark/proto/v1alpha1/database/databasev1alpha1connect"
 )
 ```
 

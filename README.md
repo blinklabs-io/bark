@@ -6,7 +6,9 @@ Bark is a gRPC-based communication protocol for [Dingo](https://github.com/blink
 
 Bark enables Dingo-to-Dingo communication for managing and operating Dingo instances. The protocol is designed to be extensible, supporting various operational aspects as they become needed.
 
-The current implementation is the Archive Proxy protocol, which enables efficient retrieval of immutable blockchain data by having archive servers return signed URLs to cloud object storage (S3, GCS, etc.).
+Current protocols:
+- **Archive Proxy**: efficient retrieval of immutable blockchain data via signed URLs to cloud object storage (S3, GCS, etc.)
+- **Database Service**: database lifecycle management: snapshots, restoration, and chain truncation with async progress streaming
 
 ## Features
 
@@ -20,10 +22,15 @@ The current implementation is the Archive Proxy protocol, which enables efficien
 ## Repository Structure
 
 ```plaintext
-proto/v1alpha1/archive/              - Protocol buffer definitions and generated Go code
-  archive.proto                      - Protocol buffer definition
-  archive.pb.go                      - Generated protobuf Go code
-  archivev1alpha1connect/            - Generated ConnectRPC service code
+proto/v1alpha1/
+  archive/                           - Archive Proxy protocol
+    archive.proto                    - Protocol buffer definition
+    archive.pb.go                    - Generated protobuf Go code
+    archivev1alpha1connect/          - Generated ConnectRPC service code
+  database/                          - Database Service protocol
+    database.proto                   - Protocol buffer definition
+    database.pb.go                   - Generated protobuf Go code
+    databasev1alpha1connect/         - Generated ConnectRPC service code
 ```
 
 ## Usage
@@ -34,6 +41,9 @@ Import the generated Go code in your project:
 import (
     archivev1alpha1 "github.com/blinklabs-io/bark/proto/v1alpha1/archive"
     "github.com/blinklabs-io/bark/proto/v1alpha1/archive/archivev1alpha1connect"
+
+    databasev1alpha1 "github.com/blinklabs-io/bark/proto/v1alpha1/database"
+    "github.com/blinklabs-io/bark/proto/v1alpha1/database/databasev1alpha1connect"
 )
 ```
 
@@ -80,9 +90,13 @@ go test ./...
 
 Service for retrieving immutable block data via signed cloud storage URLs.
 
-**RPC Method**: `FetchBlock`
-- Request: List of block identifiers (hash, slot, height)
-- Response: Signed URLs with expiration timestamps
+**RPC Methods**: `FetchBlock`
+
+### Database Service (v1alpha1)
+
+Service for database lifecycle management with mutual exclusion enforcement.
+
+**RPC Methods**: `CreateSnapshot`, `GetSnapshotStatus`, `ListSnapshots`, `DeleteSnapshot`, `VerifySnapshot`, `Restore`, `GetRestoreStatus`, `ListAvailableSnapshots`, `Truncate`, `GetTruncateStatus`, `StreamOperationProgress`, `GetOperationHistory`, `GetDatabaseInfo`, `CancelOperation`
 
 See [PROTOCOL_DESIGN.md](PROTOCOL_DESIGN.md) for detailed protocol documentation.
 
