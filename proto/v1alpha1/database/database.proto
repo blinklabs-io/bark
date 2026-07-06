@@ -35,9 +35,12 @@ service DatabaseService {
   // including those on remote object storage.
   rpc ListAvailableSnapshots(ListAvailableSnapshotsRequest) returns (ListAvailableSnapshotsResponse);
 
-  // Truncate begins an async truncation of the chain. The target block is
-  // preserved and becomes the new chain tip; only blocks with a strictly
-  // greater slot or block number are removed.
+  // Truncate begins an async truncation of the chain. This is the
+  // network-triggerable form of the db-truncator capability described in
+  // CIP-0135 (Disaster Recovery Plan for Cardano Networks). The target block
+  // is preserved and becomes the new chain tip; only blocks with a strictly
+  // greater slot or block number are removed. On completion the database is
+  // resync-ready against the main network.
   rpc Truncate(TruncateRequest) returns (TruncateResponse);
 
   // GetTruncateStatus returns the progress of a truncate operation.
