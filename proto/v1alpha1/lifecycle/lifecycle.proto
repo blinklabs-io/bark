@@ -1,0 +1,176 @@
+syntax = "proto3";
+
+package bark.v1alpha1.lifecycle;
+
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/blinklabs-io/bark/proto/v1alpha1/lifecycle;lifecyclev1alpha1";
+
+// LifecycleService provides remote process-lifecycle control for a Dingo
+// node: graceful stop, graceful restart (stop followed by re-execution of
+// the node process), and status reporting. It exists to enable fleet
+// management, maintenance, and rolling updates without requiring direct
+// OS-level access (e.g. SSH + systemctl) to the host.
+//
+// Only one of Stop or Restart may be in progress at a time; a second
+// request received while one is already underway is rejected with
+// FAILED_PRECONDITION.
+//
+// Authorization: Stop and Restart can take a node offline, so servers MUST
+// reject anonymous or unauthenticated callers for every RPC on this
+// service. See PROTOCOL_DESIGN.md for the mTLS-based authorization model
+// enforced at the transport layer.
+service LifecycleService {
+  // Stop initiates a graceful shutdown of the node: the shutdown
+  // coordinator ceases chain sync, drains in-flight connections, flushes
+  // the database, and then exits the process. If the graceful sequence
+  // does not finish within the effective timeout, the coordinator forces
+  // the process to exit rather than hang.
+  rpc Stop(StopRequest) returns (StopResponse);
+
+  // Restart performs the same graceful shutdown sequence as Stop and then
+  // re-executes the node process in place (same binary path and
+  // arguments), rather than leaving it stopped. This allows picking up a
+  // replaced binary (e.g. after an upgrade) or a changed configuration.
+  rpc Restart(RestartRequest) returns (RestartResponse);
+
+  // GetStatus reports the node's current lifecycle state, health, uptime,
+  // version, and chain synchronization state. It remains available while
+  // a graceful stop or restart is draining, so callers can poll it to
+  // observe the transition and the enforced deadline.
+  rpc GetStatus(GetStatusRequest) returns (GetStatusResponse);
+}
+
+// LifecycleState describes where the node process is in its own
+// stop/restart sequence. This is distinct from SyncStatus, which describes
+// the node's position relative to the chain.
+enum LifecycleState {
+  LIFECYCLE_STATE_UNSPECIFIED = 0;
+
+  // The node is running normally and accepting requests.
+  LIFECYCLE_STATE_RUNNING = 1;
+
+  // A graceful stop is in progress: sync has ceased and the coordinator is
+  // draining connections and flushing the database before exit.
+  LIFECYCLE_STATE_STOPPING = 2;
+
+  // A graceful restart is in progress; the same shutdown sequence as
+  // STOPPING is running, after which the process re-executes.
+  LIFECYCLE_STATE_RESTARTING = 3;
+}
+
+// HealthStatus is a coarse-grained health signal for the node process,
+// independent of chain synchronization progress.
+enum HealthStatus {
+  HEALTH_STATUS_UNSPECIFIED = 0;
+
+  // The node is fully operational.
+  HEALTH_STATUS_HEALTHY = 1;
+
+  // The node is operational but impaired (e.g. a non-critical subsystem is
+  // failing, or sync has stalled).
+  HEALTH_STATUS_DEGRADED = 2;
+
+  // The node cannot perform its core function.
+  HEALTH_STATUS_UNHEALTHY = 3;
+}
+
+// BlockRef identifies a block by one or more of hash, slot, or block
+// number. At least one field must be set. When multiple fields are set,
+// all must agree; the server returns INVALID_ARGUMENT if they are
+// inconsistent.
+message BlockRef {
+  // Block hash as a hex-encoded string.
+  optional string hash = 1;
+
+  // Slot number.
+  optional uint64 slot = 2;
+
+  // Block number / height.
+  optional uint64 block_number = 3;
+}
+
+// SyncStatus describes the node's chain synchronization state.
+message SyncStatus {
+  // Whether the node considers itself caught up with the tip of the
+  // network.
+  bool synced = 1;
+
+  // The node's current local chain tip. Unset if the node has not synced
+  // any blocks yet.
+  optional BlockRef tip = 2;
+
+  // Estimated slot of the network tip, if known. 0 if unknown.
+  uint64 estimated_network_tip_slot = 3;
+
+  // Estimated number of slots behind the network tip. 0 when synced or
+  // when the network tip is unknown.
+  uint64 slots_behind = 4;
+}
+
+// ─── Stop RPC ─────────────────────────────────────────────────────────────
+
+message StopRequest {
+  // Maximum duration to allow for the graceful shutdown sequence before
+  // the coordinator forces the process to exit. Unset or zero means the
+  // server's configured default is used.
+  optional google.protobuf.Duration graceful_timeout = 1;
+}
+
+message StopResponse {
+  // The graceful timeout that will actually be enforced: the server's
+  // default when the request left graceful_timeout unset, or the
+  // server's configured maximum when the request exceeded it.
+  google.protobuf.Duration effective_timeout = 1;
+
+  // Deadline by which the graceful sequence must finish before the
+  // process is forced to exit.
+  google.protobuf.Timestamp deadline = 2;
+}
+
+// ─── Restart RPC ──────────────────────────────────────────────────────────
+
+message RestartRequest {
+  // Maximum duration to allow for the graceful shutdown sequence before
+  // the coordinator forces re-execution. Unset or zero means the server's
+  // configured default is used.
+  optional google.protobuf.Duration graceful_timeout = 1;
+}
+
+message RestartResponse {
+  // The graceful timeout that will actually be enforced: the server's
+  // default when the request left graceful_timeout unset, or the
+  // server's configured maximum when the request exceeded it.
+  google.protobuf.Duration effective_timeout = 1;
+
+  // Deadline by which the graceful sequence must finish before the
+  // process is forced to re-execute.
+  google.protobuf.Timestamp deadline = 2;
+}
+
+// ─── GetStatus RPC ────────────────────────────────────────────────────────
+
+message GetStatusRequest {}
+
+message GetStatusResponse {
+  // Current lifecycle state of the node process.
+  LifecycleState state = 1;
+
+  // Coarse-grained health signal.
+  HealthStatus health = 2;
+
+  // How long the node process has been running.
+  google.protobuf.Duration uptime = 3;
+
+  // Node software version (e.g. semantic version, optionally with a build
+  // or commit identifier).
+  string version = 4;
+
+  // Chain synchronization state.
+  SyncStatus sync = 5;
+
+  // Deadline by which an in-progress graceful stop or restart must finish
+  // before it is forced. Only set when state is STOPPING or RESTARTING.
+  optional google.protobuf.Timestamp deadline = 6;
+}
