@@ -17,9 +17,15 @@ option go_package = "github.com/blinklabs-io/bark/proto/v1alpha1/lifecycle;lifec
 // request received while one is already underway is rejected with
 // FAILED_PRECONDITION.
 //
-// Authorization: Stop and Restart can take a node offline, so servers MUST
-// reject anonymous or unauthenticated callers for every RPC on this
-// service. See PROTOCOL_DESIGN.md for the mTLS-based authorization model
+// Authorization: a valid mTLS client certificate proves identity, not
+// permission. Servers MUST reject anonymous or unauthenticated callers
+// (UNAUTHENTICATED) for every RPC on this service, and MUST additionally
+// map the verified client identity to an authorized operator principal
+// before honoring Stop or Restart, since either can take a node offline.
+// An authenticated caller who is not an authorized operator MUST be
+// rejected with PERMISSION_DENIED. GetStatus is read-only and requires
+// only a valid authenticated identity, not operator authorization. See
+// PROTOCOL_DESIGN.md for the full authentication/authorization model
 // enforced at the transport layer.
 service LifecycleService {
   // Stop initiates a graceful shutdown of the node: the shutdown
@@ -77,9 +83,9 @@ enum HealthStatus {
 }
 
 // BlockRef identifies a block by one or more of hash, slot, or block
-// number. At least one field must be set. When multiple fields are set,
-// all must agree; the server returns INVALID_ARGUMENT if they are
-// inconsistent.
+// number. This message is only used as output (via SyncStatus.tip); no
+// LifecycleService RPC accepts it as input. The server MUST set at least
+// one field, and any fields it does set MUST agree with each other.
 message BlockRef {
   // Block hash as a hex-encoded string.
   optional string hash = 1;
@@ -114,7 +120,8 @@ message SyncStatus {
 message StopRequest {
   // Maximum duration to allow for the graceful shutdown sequence before
   // the coordinator forces the process to exit. Unset or zero means the
-  // server's configured default is used.
+  // server's configured default is used. The server returns
+  // INVALID_ARGUMENT if this is negative.
   optional google.protobuf.Duration graceful_timeout = 1;
 }
 
@@ -134,7 +141,8 @@ message StopResponse {
 message RestartRequest {
   // Maximum duration to allow for the graceful shutdown sequence before
   // the coordinator forces re-execution. Unset or zero means the server's
-  // configured default is used.
+  // configured default is used. The server returns INVALID_ARGUMENT if
+  // this is negative.
   optional google.protobuf.Duration graceful_timeout = 1;
 }
 

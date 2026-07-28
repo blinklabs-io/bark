@@ -107,11 +107,14 @@ Only one of snapshot, restore, truncate, or verify may run at a time. A second r
 
 ### Authorization
 
-Per [dingo#2988](https://github.com/blinklabs-io/dingo/issues/2988), DatabaseService exposes operations that alter persistent state or interrupt availability and must not be reachable by anonymous callers. Servers require mutual TLS (mTLS) and must verify the client certificate before dispatching any RPC on this service, per the same transport-layer model as LifecycleService.
+Per [dingo#2988](https://github.com/blinklabs-io/dingo/issues/2988), DatabaseService exposes operations that alter persistent state or interrupt availability and must not be reachable by anonymous callers. Authentication and authorization are distinct requirements here, and both must be enforced, per the same transport-layer model as LifecycleService:
+
+- **Authentication**: servers require mutual TLS (mTLS) and must verify the client certificate before dispatching any RPC on this service. A caller with no certificate, or an untrusted/invalid one, MUST be rejected with `UNAUTHENTICATED`.
+- **Authorization**: a valid client certificate proves identity, not permission. Servers MUST map the verified certificate identity (e.g. its subject or a configured fingerprint) to an authorized operator principal via a server-side policy. An authenticated caller who is not an authorized operator MUST be rejected with `PERMISSION_DENIED`, distinct from `UNAUTHENTICATED`.
 
 RPCs are split by sensitivity:
-- Read-only: `ListSnapshots`, `ListAvailableSnapshots`, `GetSnapshotStatus`, `GetRestoreStatus`, `GetTruncateStatus`, `StreamOperationProgress`, `GetOperationHistory`, `GetDatabaseInfo`
-- Destructive/mutating (require an authenticated operator identity): `CreateSnapshot`, `DeleteSnapshot`, `VerifySnapshot`, `Restore`, `Truncate`, `CancelOperation`
+- Read-only (any authenticated identity permitted, no operator authorization required): `ListSnapshots`, `ListAvailableSnapshots`, `GetSnapshotStatus`, `GetRestoreStatus`, `GetTruncateStatus`, `StreamOperationProgress`, `GetOperationHistory`, `GetDatabaseInfo`
+- Destructive/mutating (require an authorized operator principal; `PERMISSION_DENIED` for an authenticated-but-unauthorized caller): `CreateSnapshot`, `DeleteSnapshot`, `VerifySnapshot`, `Restore`, `Truncate`, `CancelOperation`
 
 ### Benefits
 
@@ -158,7 +161,12 @@ Per [dingo#1653](https://github.com/blinklabs-io/dingo/issues/1653), Dingo emits
 
 ### Authorization
 
-Stop and Restart can take a node offline, so servers MUST reject anonymous or unauthenticated callers for every RPC on this service. Per [dingo#1653](https://github.com/blinklabs-io/dingo/issues/1653), authentication/authorization is enforced at the transport layer rather than within the service itself: servers require mutual TLS (mTLS) and must verify the client certificate presented on the connection before dispatching any LifecycleService RPC. This mirrors the mTLS support already defined for the Archive Proxy protocol, except here it is mandatory rather than optional — a plain-text or server-TLS-only connection must be refused for this service. Dingo is responsible for enforcing this at the server; Bark defines the contract and expected behavior.
+Per [dingo#1653](https://github.com/blinklabs-io/dingo/issues/1653), authentication and authorization are enforced at the transport layer rather than within the service itself, and are distinct requirements that must both be satisfied:
+
+- **Authentication**: servers require mutual TLS (mTLS) and must verify the client certificate presented on the connection before dispatching any LifecycleService RPC. This mirrors the mTLS support already defined for the Archive Proxy protocol, except here it is mandatory rather than optional — a plain-text or server-TLS-only connection must be refused for this service. A caller with no certificate, or an untrusted/invalid one, MUST be rejected with `UNAUTHENTICATED`.
+- **Authorization**: a valid client certificate proves identity, not permission. Stop and Restart can take a node offline, so servers MUST map the verified certificate identity to an authorized operator principal via a server-side policy, and reject an authenticated caller who is not an authorized operator with `PERMISSION_DENIED`. GetStatus is read-only and requires only a valid authenticated identity, not operator authorization.
+
+Dingo is responsible for implementing and enforcing this authentication/authorization model at the server; Bark defines the contract and expected behavior.
 
 ### Benefits
 

@@ -142,9 +142,9 @@ func (HealthStatus) EnumDescriptor() ([]byte, []int) {
 }
 
 // BlockRef identifies a block by one or more of hash, slot, or block
-// number. At least one field must be set. When multiple fields are set,
-// all must agree; the server returns INVALID_ARGUMENT if they are
-// inconsistent.
+// number. This message is only used as output (via SyncStatus.tip); no
+// LifecycleService RPC accepts it as input. The server MUST set at least
+// one field, and any fields it does set MUST agree with each other.
 type BlockRef struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Block hash as a hex-encoded string.
@@ -288,7 +288,8 @@ type StopRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Maximum duration to allow for the graceful shutdown sequence before
 	// the coordinator forces the process to exit. Unset or zero means the
-	// server's configured default is used.
+	// server's configured default is used. The server returns
+	// INVALID_ARGUMENT if this is negative.
 	GracefulTimeout *durationpb.Duration `protobuf:"bytes,1,opt,name=graceful_timeout,json=gracefulTimeout,proto3,oneof" json:"graceful_timeout,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
@@ -392,7 +393,8 @@ type RestartRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Maximum duration to allow for the graceful shutdown sequence before
 	// the coordinator forces re-execution. Unset or zero means the server's
-	// configured default is used.
+	// configured default is used. The server returns INVALID_ARGUMENT if
+	// this is negative.
 	GracefulTimeout *durationpb.Duration `protobuf:"bytes,1,opt,name=graceful_timeout,json=gracefulTimeout,proto3,oneof" json:"graceful_timeout,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
