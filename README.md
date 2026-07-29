@@ -9,6 +9,7 @@ Bark enables Dingo-to-Dingo communication for managing and operating Dingo insta
 Current protocols:
 - **Archive Proxy**: efficient retrieval of immutable blockchain data via signed URLs to cloud object storage (S3, GCS, etc.)
 - **Database Service**: database lifecycle management: snapshots, restoration, and chain truncation with async progress streaming
+- **Lifecycle Service**: remote process-lifecycle control: graceful stop, graceful restart, and status reporting
 
 ## Features
 
@@ -31,6 +32,10 @@ proto/v1alpha1/
     database.proto                   - Protocol buffer definition
     database.pb.go                   - Generated protobuf Go code
     databasev1alpha1connect/         - Generated ConnectRPC service code
+  lifecycle/                         - Lifecycle Service protocol
+    lifecycle.proto                  - Protocol buffer definition
+    lifecycle.pb.go                  - Generated protobuf Go code
+    lifecyclev1alpha1connect/        - Generated ConnectRPC service code
 ```
 
 ## Usage
@@ -44,6 +49,9 @@ import (
 
     databasev1alpha1 "github.com/blinklabs-io/bark/proto/v1alpha1/database"
     "github.com/blinklabs-io/bark/proto/v1alpha1/database/databasev1alpha1connect"
+
+    lifecyclev1alpha1 "github.com/blinklabs-io/bark/proto/v1alpha1/lifecycle"
+    "github.com/blinklabs-io/bark/proto/v1alpha1/lifecycle/lifecyclev1alpha1connect"
 )
 ```
 
@@ -97,6 +105,12 @@ Service for retrieving immutable block data via signed cloud storage URLs.
 Service for database lifecycle management with mutual exclusion enforcement.
 
 **RPC Methods**: `CreateSnapshot`, `GetSnapshotStatus`, `ListSnapshots`, `DeleteSnapshot`, `VerifySnapshot`, `Restore`, `GetRestoreStatus`, `ListAvailableSnapshots`, `Truncate`, `GetTruncateStatus`, `StreamOperationProgress`, `GetOperationHistory`, `GetDatabaseInfo`, `CancelOperation`
+
+### Lifecycle Service (v1alpha1)
+
+Service for remote process-lifecycle control: graceful stop, graceful restart (stop + re-execution), and status reporting. Requires mTLS-authenticated callers; only one of Stop or Restart may run at a time.
+
+**RPC Methods**: `Stop`, `Restart`, `GetStatus`
 
 See [PROTOCOL_DESIGN.md](PROTOCOL_DESIGN.md) for detailed protocol documentation.
 

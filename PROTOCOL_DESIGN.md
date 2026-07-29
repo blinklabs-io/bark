@@ -5,7 +5,7 @@ The Bark protocol is a gRPC-based communication protocol for Dingo blockchain no
 
 Bark enables Dingo-to-Dingo communication for managing and operating Dingo instances. The protocol is designed with a modular, extensible architecture to support various operational aspects as they become needed.
 
-The current protocol definitions cover the Archive Proxy and Database Service. Runtime server and operator implementations live in Dingo.
+The current protocol definitions cover the Archive Proxy, Database Service, and Lifecycle Service. Runtime server and operator implementations live in Dingo.
 
 ## Goals
 - Dingo-to-Dingo Communication: Enable management and operation of Dingo instances
@@ -105,12 +105,74 @@ The target block passed to Truncate is preserved and becomes the new chain tip. 
 
 Only one of snapshot, restore, truncate, or verify may run at a time. A second request while an operation is in progress returns `FAILED_PRECONDITION`. Use `CancelOperation` to abort a running operation before starting another.
 
+### Authorization
+
+Per [dingo#2988](https://github.com/blinklabs-io/dingo/issues/2988), DatabaseService exposes operations that alter persistent state or interrupt availability and must not be reachable by anonymous callers. Authentication and authorization are distinct requirements here, and both must be enforced, per the same transport-layer model as LifecycleService:
+
+- **Authentication**: servers require mutual TLS (mTLS) and must verify the client certificate before dispatching any RPC on this service. A connection with no client certificate, or an invalid/untrusted one, MUST be rejected during the TLS handshake, before RPC dispatch. If a supported deployment allows a request to reach RPC handling without a verified principal, the server MUST reject that request with `UNAUTHENTICATED`.
+- **Authorization**: a valid client certificate proves identity, not permission. Servers MUST map the verified certificate identity (e.g. its subject or a configured fingerprint) to an authorized operator principal via a server-side policy. An authenticated caller who is not an authorized operator MUST be rejected with `PERMISSION_DENIED`, distinct from `UNAUTHENTICATED`.
+
+RPCs are split by sensitivity:
+- Read-only (any authenticated identity permitted, no operator authorization required): `ListSnapshots`, `ListAvailableSnapshots`, `GetSnapshotStatus`, `GetRestoreStatus`, `GetTruncateStatus`, `StreamOperationProgress`, `GetOperationHistory`, `GetDatabaseInfo`
+- Destructive/mutating (require an authorized operator principal; `PERMISSION_DENIED` for an authenticated-but-unauthorized caller): `CreateSnapshot`, `DeleteSnapshot`, `VerifySnapshot`, `Restore`, `Truncate`, `CancelOperation`
+
 ### Benefits
 
 - Async operations with streamable progress (no client timeout risk on long-running jobs)
 - Queryable history for operator auditing
 - Remote object storage support for snapshots (S3, GCS, etc.)
 - Clear cancellation and error semantics
+
+## Lifecycle Service Protocol (v1alpha1)
+
+The Lifecycle Service provides remote process-lifecycle control for a Dingo node: graceful stop, graceful restart, and status reporting. It exists to enable fleet management, maintenance, and rolling updates without requiring direct OS-level access (e.g. SSH + systemctl) to the host.
+
+### Architecture
+
+Server: Dingo instance exposing lifecycle control
+Client: dingoctl or another Dingo instance acting as operator
+
+### Protocol Definition
+
+Location: `proto/v1alpha1/lifecycle/lifecycle.proto`
+
+Service: LifecycleService
+
+- Stop(StopRequest) returns (StopResponse)
+- Restart(RestartRequest) returns (RestartResponse)
+- GetStatus(GetStatusRequest) returns (GetStatusResponse)
+
+Key messages:
+- StopRequest / RestartRequest: carry an optional `graceful_timeout`; unset or zero means the server's configured default is used
+- StopResponse / RestartResponse: report the `effective_timeout` that will actually be enforced and the `deadline` by which the graceful sequence must finish
+- GetStatusResponse: reports `LifecycleState`, `HealthStatus`, process `uptime`, `version`, and `SyncStatus` (synced flag, current tip, estimated network tip slot, slots behind)
+
+### Shutdown Sequence
+
+Stop and Restart both trigger the same shutdown coordinator sequence: cease chain sync, drain in-flight connections, flush the database, then exit (Stop) or re-execute the same binary and arguments in place (Restart). If the sequence does not finish within the effective timeout, the coordinator forces the process to exit (or re-execute) rather than hang indefinitely. While draining, `GetStatus` reports `LIFECYCLE_STATE_STOPPING` or `LIFECYCLE_STATE_RESTARTING` along with the enforced deadline, so callers can poll for the transition instead of needing a dedicated streaming RPC.
+
+### Mutual Exclusion
+
+Only one of Stop or Restart may be in progress at a time. A second request received while one is already underway is rejected with `FAILED_PRECONDITION`.
+
+### Internal Event Emission
+
+Per [dingo#1653](https://github.com/blinklabs-io/dingo/issues/1653), Dingo emits lifecycle events (stopping, restarting, etc.) on its existing internal event bus as the shutdown coordinator runs, so other in-process subsystems can react to a pending stop/restart. This is purely internal to Dingo and is not part of the Bark wire contract — no LifecycleService RPC carries it. The externally-observable equivalent for remote callers is `GetStatus`'s `LifecycleState` transitioning to `LIFECYCLE_STATE_STOPPING`/`LIFECYCLE_STATE_RESTARTING`; a dedicated streaming RPC was deliberately not added for this since polling `GetStatus` covers the network-facing need.
+
+### Authorization
+
+Per [dingo#1653](https://github.com/blinklabs-io/dingo/issues/1653), authentication and authorization are enforced at the transport layer rather than within the service itself, and are distinct requirements that must both be satisfied:
+
+- **Authentication**: servers require mutual TLS (mTLS) and must verify the client certificate presented on the connection before dispatching any LifecycleService RPC. This mirrors the mTLS support already defined for the Archive Proxy protocol, except here it is mandatory rather than optional. A plain-text or server-TLS-only connection must be refused, and a connection with no client certificate, or an invalid/untrusted one, MUST be rejected during the TLS handshake, before RPC dispatch. If a supported deployment allows a request to reach RPC handling without a verified principal, the server MUST reject that request with `UNAUTHENTICATED`.
+- **Authorization**: a valid client certificate proves identity, not permission. Stop and Restart can take a node offline, so servers MUST map the verified certificate identity to an authorized operator principal via a server-side policy, and reject an authenticated caller who is not an authorized operator with `PERMISSION_DENIED`. GetStatus is read-only and requires only a valid authenticated identity, not operator authorization.
+
+Dingo is responsible for implementing and enforcing this authentication/authorization model at the server; Bark defines the contract and expected behavior.
+
+### Benefits
+
+- Enables fleet management and rolling updates without SSH access to the host
+- Graceful timeout is explicit and observable via `GetStatus`, with a documented forced-exit fallback
+- Restart re-executes in place, picking up a replaced binary or changed configuration without external process supervision
 
 ## Versioning
 
@@ -142,6 +204,10 @@ proto/v1alpha1/              - Protocol buffer definitions and generated Go code
     database.proto           - Protocol buffer definition
     database.pb.go           - Generated protobuf Go code
     databasev1alpha1connect/ - Generated ConnectRPC service code
+  lifecycle/                 - Lifecycle Service protocol
+    lifecycle.proto          - Protocol buffer definition
+    lifecycle.pb.go          - Generated protobuf Go code
+    lifecyclev1alpha1connect/ - Generated ConnectRPC service code
 buf.gen.yaml                 - Code generation configuration
 buf.yaml                     - Buf module configuration
 ```
@@ -151,14 +217,15 @@ buf.yaml                     - Buf module configuration
 Completed:
 - Protocol buffer definition for Archive Proxy (proto/v1alpha1/archive/archive.proto)
 - Protocol buffer definition for Database Service (proto/v1alpha1/database/database.proto)
+- Protocol buffer definition for Lifecycle Service (proto/v1alpha1/lifecycle/lifecycle.proto)
 - Buf configuration and code generation setup
 - Go module with ConnectRPC dependencies
-- Generated Go code for v1alpha1 archive and database modules
+- Generated Go code for v1alpha1 archive, database, and lifecycle modules
 - CI/CD pipelines for linting, testing, and dependency management
 - Conventional commit enforcement
 
 In Progress:
-- Server implementation in Dingo (archive and database services)
+- Server implementation in Dingo (archive, database, and lifecycle services)
 - Client implementation in Dingo / dingoctl
 - Integration testing
 
@@ -173,11 +240,15 @@ import (
 
     databasev1alpha1 "github.com/blinklabs-io/bark/proto/v1alpha1/database"
     "github.com/blinklabs-io/bark/proto/v1alpha1/database/databasev1alpha1connect"
+
+    lifecyclev1alpha1 "github.com/blinklabs-io/bark/proto/v1alpha1/lifecycle"
+    "github.com/blinklabs-io/bark/proto/v1alpha1/lifecycle/lifecyclev1alpha1connect"
 )
 ```
 
 ## References
 - [Dingo Issue #335](https://github.com/blinklabs-io/dingo/issues/335) - Original requirements
+- [Dingo Issue #1653](https://github.com/blinklabs-io/dingo/issues/1653) - Remote lifecycle service requirements
 - [Dingo Repository](https://github.com/blinklabs-io/dingo) - Blockchain node implementation
 - [utxorpc/spec](https://github.com/utxorpc/spec) - Reference for repository organization
 - [ConnectRPC](https://connectrpc.com) - RPC framework
