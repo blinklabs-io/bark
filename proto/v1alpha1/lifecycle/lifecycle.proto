@@ -17,14 +17,17 @@ option go_package = "github.com/blinklabs-io/bark/proto/v1alpha1/lifecycle;lifec
 // request received while one is already underway is rejected with
 // FAILED_PRECONDITION.
 //
-// Authorization: a valid mTLS client certificate proves identity, not
-// permission. Servers MUST reject anonymous or unauthenticated callers
-// (UNAUTHENTICATED) for every RPC on this service, and MUST additionally
-// map the verified client identity to an authorized operator principal
-// before honoring Stop or Restart, since either can take a node offline.
-// An authenticated caller who is not an authorized operator MUST be
-// rejected with PERMISSION_DENIED. GetStatus is read-only and requires
-// only a valid authenticated identity, not operator authorization. See
+// Authorization: servers require mTLS and MUST reject connections with a
+// missing, invalid, or untrusted client certificate during the TLS
+// handshake, before RPC dispatch. If a supported deployment allows a
+// request to reach RPC handling without a verified principal, the server
+// MUST reject it with UNAUTHENTICATED. A valid mTLS client certificate
+// proves identity, not permission, so servers MUST additionally map the
+// verified client identity to an authorized operator principal before
+// honoring Stop or Restart, since either can take a node offline. An
+// authenticated caller who is not an authorized operator MUST be rejected
+// with PERMISSION_DENIED. GetStatus is read-only and requires only a valid
+// authenticated identity, not operator authorization. See
 // PROTOCOL_DESIGN.md for the full authentication/authorization model
 // enforced at the transport layer.
 service LifecycleService {
