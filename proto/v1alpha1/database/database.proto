@@ -338,6 +338,9 @@ message GetDatabaseInfoResponse {
 
   // Operation ID of any currently running operation.
   optional string current_operation_id = 6;
+
+  // Configured storage tier for the running node (e.g. "core", "api").
+  string tier = 7;
 }
 
 message CancelOperationRequest {

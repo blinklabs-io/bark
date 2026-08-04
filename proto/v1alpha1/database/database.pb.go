@@ -1730,8 +1730,10 @@ type GetDatabaseInfoResponse struct {
 	OperationInProgress bool `protobuf:"varint,5,opt,name=operation_in_progress,json=operationInProgress,proto3" json:"operation_in_progress,omitempty"`
 	// Operation ID of any currently running operation.
 	CurrentOperationId *string `protobuf:"bytes,6,opt,name=current_operation_id,json=currentOperationId,proto3,oneof" json:"current_operation_id,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	// Configured storage tier for the running node (e.g. "core", "api").
+	Tier          string `protobuf:"bytes,7,opt,name=tier,proto3" json:"tier,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetDatabaseInfoResponse) Reset() {
@@ -1802,6 +1804,13 @@ func (x *GetDatabaseInfoResponse) GetOperationInProgress() bool {
 func (x *GetDatabaseInfoResponse) GetCurrentOperationId() string {
 	if x != nil && x.CurrentOperationId != nil {
 		return *x.CurrentOperationId
+	}
+	return ""
+}
+
+func (x *GetDatabaseInfoResponse) GetTier() string {
+	if x != nil {
+		return x.Tier
 	}
 	return ""
 }
@@ -2011,7 +2020,7 @@ const file_v1alpha1_database_database_proto_rawDesc = "" +
 	"\x1bGetOperationHistoryResponse\x12A\n" +
 	"\arecords\x18\x01 \x03(\v2'.bark.v1alpha1.database.OperationRecordR\arecords\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"\x18\n" +
-	"\x16GetDatabaseInfoRequest\"\xb2\x02\n" +
+	"\x16GetDatabaseInfoRequest\"\xc6\x02\n" +
 	"\x17GetDatabaseInfoResponse\x122\n" +
 	"\x03tip\x18\x01 \x01(\v2 .bark.v1alpha1.database.BlockRefR\x03tip\x12\x1f\n" +
 	"\vblock_count\x18\x02 \x01(\x04R\n" +
@@ -2021,7 +2030,8 @@ const file_v1alpha1_database_database_proto_rawDesc = "" +
 	"\voldest_slot\x18\x04 \x01(\x04R\n" +
 	"oldestSlot\x122\n" +
 	"\x15operation_in_progress\x18\x05 \x01(\bR\x13operationInProgress\x125\n" +
-	"\x14current_operation_id\x18\x06 \x01(\tH\x00R\x12currentOperationId\x88\x01\x01B\x17\n" +
+	"\x14current_operation_id\x18\x06 \x01(\tH\x00R\x12currentOperationId\x88\x01\x01\x12\x12\n" +
+	"\x04tier\x18\a \x01(\tR\x04tierB\x17\n" +
 	"\x15_current_operation_id\";\n" +
 	"\x16CancelOperationRequest\x12!\n" +
 	"\foperation_id\x18\x01 \x01(\tR\voperationId\"Z\n" +
