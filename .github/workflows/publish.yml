@@ -22,6 +22,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Setup Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
@@ -41,7 +42,13 @@ jobs:
         run: go mod tidy
 
       - name: Commit generated code
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # The checkout step uses persist-credentials: false so the token is
+          # not left in the local git config for later steps. Re-establish push
+          # auth for this step via gh's credential helper (uses GH_TOKEN).
+          gh auth setup-git
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add proto/ go.mod go.sum
