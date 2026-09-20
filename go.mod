@@ -2,6 +2,8 @@ module github.com/blinklabs-io/bark
 
 go 1.25.0
 
+toolchain go1.25.14
+
 require (
 	connectrpc.com/connect v1.21.0
 	google.golang.org/protobuf v1.36.12
