@@ -59,7 +59,7 @@ import (
 
 ### Prerequisites
 
-- Go 1.24+
+- Go 1.25+ (`go.mod` pins the `go1.25.14` toolchain, which the default `GOTOOLCHAIN=auto` fetches automatically)
 - [buf](https://buf.build) CLI
 
 ### Setup
