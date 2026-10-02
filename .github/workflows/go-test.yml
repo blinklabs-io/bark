@@ -1,0 +1,23 @@
+# Generated automatically by org-governance-bot. Do not edit manually.
+name: "go-test"
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  orchestrate:
+    uses: blinklabs-io/actions/.github/workflows/reuseable-go-test.yml@main
+    with:
+      go-versions: '["1.25.x"]'
+      run-buf-checks: true
+      run-build: true
+      run-golangci-lint: true
+      run-nilaway: true
+      run-vet: true
+      verify-buf-generated: true
+      verify-modules: true
