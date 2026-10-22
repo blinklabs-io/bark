@@ -21,8 +21,11 @@ import (
 // version compiled into your binary.
 const _ = connect.IsAtLeastVersion1_13_0
 
-func mustConnectServiceMethods(services protoreflect.ServiceDescriptors, serviceName string) protoreflect.MethodDescriptors {
-	service := services.ByName(protoreflect.Name(serviceName))
+func mustConnectServiceMethods(fileDescriptor protoreflect.FileDescriptor, serviceName string) protoreflect.MethodDescriptors {
+	if fileDescriptor == nil {
+		panic("generated Connect file descriptor missing for service: " + serviceName)
+	}
+	service := fileDescriptor.Services().ByName(protoreflect.Name(serviceName))
 	if service == nil {
 		panic("generated Connect service descriptor missing: " + serviceName)
 	}
@@ -89,7 +92,7 @@ type LifecycleServiceClient interface {
 // http://api.acme.com or https://acme.com/grpc).
 func NewLifecycleServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) LifecycleServiceClient {
 	baseURL = strings.TrimRight(baseURL, "/")
-	lifecycleServiceMethods := mustConnectServiceMethods(lifecycle.File_v1alpha1_lifecycle_lifecycle_proto.Services(), "LifecycleService")
+	lifecycleServiceMethods := mustConnectServiceMethods(lifecycle.File_v1alpha1_lifecycle_lifecycle_proto, "LifecycleService")
 	return &lifecycleServiceClient{
 		stop: connect.NewClient[lifecycle.StopRequest, lifecycle.StopResponse](
 			httpClient,
@@ -161,7 +164,7 @@ type LifecycleServiceHandler interface {
 // By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
 // and JSON codecs. They also support gzip compression.
 func NewLifecycleServiceHandler(svc LifecycleServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
-	lifecycleServiceMethods := mustConnectServiceMethods(lifecycle.File_v1alpha1_lifecycle_lifecycle_proto.Services(), "LifecycleService")
+	lifecycleServiceMethods := mustConnectServiceMethods(lifecycle.File_v1alpha1_lifecycle_lifecycle_proto, "LifecycleService")
 	lifecycleServiceStopHandler := connect.NewUnaryHandler(
 		LifecycleServiceStopProcedure,
 		svc.Stop,

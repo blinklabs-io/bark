@@ -21,8 +21,11 @@ import (
 // version compiled into your binary.
 const _ = connect.IsAtLeastVersion1_13_0
 
-func mustConnectServiceMethods(services protoreflect.ServiceDescriptors, serviceName string) protoreflect.MethodDescriptors {
-	service := services.ByName(protoreflect.Name(serviceName))
+func mustConnectServiceMethods(fileDescriptor protoreflect.FileDescriptor, serviceName string) protoreflect.MethodDescriptors {
+	if fileDescriptor == nil {
+		panic("generated Connect file descriptor missing for service: " + serviceName)
+	}
+	service := fileDescriptor.Services().ByName(protoreflect.Name(serviceName))
 	if service == nil {
 		panic("generated Connect service descriptor missing: " + serviceName)
 	}
@@ -141,7 +144,7 @@ type DatabaseServiceClient interface {
 // http://api.acme.com or https://acme.com/grpc).
 func NewDatabaseServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) DatabaseServiceClient {
 	baseURL = strings.TrimRight(baseURL, "/")
-	databaseServiceMethods := mustConnectServiceMethods(database.File_v1alpha1_database_database_proto.Services(), "DatabaseService")
+	databaseServiceMethods := mustConnectServiceMethods(database.File_v1alpha1_database_database_proto, "DatabaseService")
 	return &databaseServiceClient{
 		createSnapshot: connect.NewClient[database.CreateSnapshotRequest, database.CreateSnapshotResponse](
 			httpClient,
@@ -364,7 +367,7 @@ type DatabaseServiceHandler interface {
 // By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
 // and JSON codecs. They also support gzip compression.
 func NewDatabaseServiceHandler(svc DatabaseServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
-	databaseServiceMethods := mustConnectServiceMethods(database.File_v1alpha1_database_database_proto.Services(), "DatabaseService")
+	databaseServiceMethods := mustConnectServiceMethods(database.File_v1alpha1_database_database_proto, "DatabaseService")
 	databaseServiceCreateSnapshotHandler := connect.NewUnaryHandler(
 		DatabaseServiceCreateSnapshotProcedure,
 		svc.CreateSnapshot,

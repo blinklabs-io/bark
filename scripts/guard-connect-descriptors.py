@@ -30,7 +30,7 @@ def transform(path: Path) -> bool:
         service_names[variable] = service
         replacement = (
             f'{variable} := mustConnectServiceMethods('
-            f'{match.group("file")}.Services(), "{service}")'
+            f'{match.group("file")}, "{service}")'
         )
         source = source.replace(match.group(0), replacement)
 
@@ -58,8 +58,11 @@ def transform(path: Path) -> bool:
         raise SystemExit(f"could not add protoreflect import in {path}")
 
     helpers = '''
-func mustConnectServiceMethods(services protoreflect.ServiceDescriptors, serviceName string) protoreflect.MethodDescriptors {
-\tservice := services.ByName(protoreflect.Name(serviceName))
+func mustConnectServiceMethods(fileDescriptor protoreflect.FileDescriptor, serviceName string) protoreflect.MethodDescriptors {
+\tif fileDescriptor == nil {
+\t\tpanic("generated Connect file descriptor missing for service: " + serviceName)
+\t}
+\tservice := fileDescriptor.Services().ByName(protoreflect.Name(serviceName))
 \tif service == nil {
 \t\tpanic("generated Connect service descriptor missing: " + serviceName)
 \t}

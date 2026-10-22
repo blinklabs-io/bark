@@ -21,8 +21,11 @@ import (
 // version compiled into your binary.
 const _ = connect.IsAtLeastVersion1_13_0
 
-func mustConnectServiceMethods(services protoreflect.ServiceDescriptors, serviceName string) protoreflect.MethodDescriptors {
-	service := services.ByName(protoreflect.Name(serviceName))
+func mustConnectServiceMethods(fileDescriptor protoreflect.FileDescriptor, serviceName string) protoreflect.MethodDescriptors {
+	if fileDescriptor == nil {
+		panic("generated Connect file descriptor missing for service: " + serviceName)
+	}
+	service := fileDescriptor.Services().ByName(protoreflect.Name(serviceName))
 	if service == nil {
 		panic("generated Connect service descriptor missing: " + serviceName)
 	}
@@ -71,7 +74,7 @@ type ArchiveServiceClient interface {
 // http://api.acme.com or https://acme.com/grpc).
 func NewArchiveServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) ArchiveServiceClient {
 	baseURL = strings.TrimRight(baseURL, "/")
-	archiveServiceMethods := mustConnectServiceMethods(archive.File_v1alpha1_archive_archive_proto.Services(), "ArchiveService")
+	archiveServiceMethods := mustConnectServiceMethods(archive.File_v1alpha1_archive_archive_proto, "ArchiveService")
 	return &archiveServiceClient{
 		fetchBlock: connect.NewClient[archive.FetchBlockRequest, archive.FetchBlockResponse](
 			httpClient,
@@ -105,7 +108,7 @@ type ArchiveServiceHandler interface {
 // By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
 // and JSON codecs. They also support gzip compression.
 func NewArchiveServiceHandler(svc ArchiveServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
-	archiveServiceMethods := mustConnectServiceMethods(archive.File_v1alpha1_archive_archive_proto.Services(), "ArchiveService")
+	archiveServiceMethods := mustConnectServiceMethods(archive.File_v1alpha1_archive_archive_proto, "ArchiveService")
 	archiveServiceFetchBlockHandler := connect.NewUnaryHandler(
 		ArchiveServiceFetchBlockProcedure,
 		svc.FetchBlock,
