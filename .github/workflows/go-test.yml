@@ -13,7 +13,7 @@ jobs:
   orchestrate:
     uses: blinklabs-io/actions/.github/workflows/reuseable-go-test.yml@main
     with:
-      go-versions: '["1.26.x"]'
+      go-versions: '["1.26.x","1.27.x"]'
       run-buf-checks: true
       run-build: true
       run-golangci-lint: true
