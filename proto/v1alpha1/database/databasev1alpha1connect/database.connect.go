@@ -9,6 +9,7 @@ import (
 	context "context"
 	errors "errors"
 	database "github.com/blinklabs-io/bark/proto/v1alpha1/database"
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	http "net/http"
 	strings "strings"
 )
@@ -19,6 +20,22 @@ import (
 // problem by either regenerating this code with an older version of connect or updating the connect
 // version compiled into your binary.
 const _ = connect.IsAtLeastVersion1_13_0
+
+func mustConnectServiceMethods(services protoreflect.ServiceDescriptors, serviceName string) protoreflect.MethodDescriptors {
+	service := services.ByName(protoreflect.Name(serviceName))
+	if service == nil {
+		panic("generated Connect service descriptor missing: " + serviceName)
+	}
+	return service.Methods()
+}
+
+func mustConnectMethod(methods protoreflect.MethodDescriptors, serviceName, methodName string) protoreflect.MethodDescriptor {
+	method := methods.ByName(protoreflect.Name(methodName))
+	if method == nil {
+		panic("generated Connect method descriptor missing: " + serviceName + "." + methodName)
+	}
+	return method
+}
 
 const (
 	// DatabaseServiceName is the fully-qualified name of the DatabaseService service.
@@ -124,90 +141,90 @@ type DatabaseServiceClient interface {
 // http://api.acme.com or https://acme.com/grpc).
 func NewDatabaseServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) DatabaseServiceClient {
 	baseURL = strings.TrimRight(baseURL, "/")
-	databaseServiceMethods := database.File_v1alpha1_database_database_proto.Services().ByName("DatabaseService").Methods()
+	databaseServiceMethods := mustConnectServiceMethods(database.File_v1alpha1_database_database_proto.Services(), "DatabaseService")
 	return &databaseServiceClient{
 		createSnapshot: connect.NewClient[database.CreateSnapshotRequest, database.CreateSnapshotResponse](
 			httpClient,
 			baseURL+DatabaseServiceCreateSnapshotProcedure,
-			connect.WithSchema(databaseServiceMethods.ByName("CreateSnapshot")),
+			connect.WithSchema(mustConnectMethod(databaseServiceMethods, "DatabaseService", "CreateSnapshot")),
 			connect.WithClientOptions(opts...),
 		),
 		getSnapshotStatus: connect.NewClient[database.GetSnapshotStatusRequest, database.GetSnapshotStatusResponse](
 			httpClient,
 			baseURL+DatabaseServiceGetSnapshotStatusProcedure,
-			connect.WithSchema(databaseServiceMethods.ByName("GetSnapshotStatus")),
+			connect.WithSchema(mustConnectMethod(databaseServiceMethods, "DatabaseService", "GetSnapshotStatus")),
 			connect.WithClientOptions(opts...),
 		),
 		listSnapshots: connect.NewClient[database.ListSnapshotsRequest, database.ListSnapshotsResponse](
 			httpClient,
 			baseURL+DatabaseServiceListSnapshotsProcedure,
-			connect.WithSchema(databaseServiceMethods.ByName("ListSnapshots")),
+			connect.WithSchema(mustConnectMethod(databaseServiceMethods, "DatabaseService", "ListSnapshots")),
 			connect.WithClientOptions(opts...),
 		),
 		deleteSnapshot: connect.NewClient[database.DeleteSnapshotRequest, database.DeleteSnapshotResponse](
 			httpClient,
 			baseURL+DatabaseServiceDeleteSnapshotProcedure,
-			connect.WithSchema(databaseServiceMethods.ByName("DeleteSnapshot")),
+			connect.WithSchema(mustConnectMethod(databaseServiceMethods, "DatabaseService", "DeleteSnapshot")),
 			connect.WithClientOptions(opts...),
 		),
 		verifySnapshot: connect.NewClient[database.VerifySnapshotRequest, database.VerifySnapshotResponse](
 			httpClient,
 			baseURL+DatabaseServiceVerifySnapshotProcedure,
-			connect.WithSchema(databaseServiceMethods.ByName("VerifySnapshot")),
+			connect.WithSchema(mustConnectMethod(databaseServiceMethods, "DatabaseService", "VerifySnapshot")),
 			connect.WithClientOptions(opts...),
 		),
 		restore: connect.NewClient[database.RestoreRequest, database.RestoreResponse](
 			httpClient,
 			baseURL+DatabaseServiceRestoreProcedure,
-			connect.WithSchema(databaseServiceMethods.ByName("Restore")),
+			connect.WithSchema(mustConnectMethod(databaseServiceMethods, "DatabaseService", "Restore")),
 			connect.WithClientOptions(opts...),
 		),
 		getRestoreStatus: connect.NewClient[database.GetRestoreStatusRequest, database.GetRestoreStatusResponse](
 			httpClient,
 			baseURL+DatabaseServiceGetRestoreStatusProcedure,
-			connect.WithSchema(databaseServiceMethods.ByName("GetRestoreStatus")),
+			connect.WithSchema(mustConnectMethod(databaseServiceMethods, "DatabaseService", "GetRestoreStatus")),
 			connect.WithClientOptions(opts...),
 		),
 		listAvailableSnapshots: connect.NewClient[database.ListAvailableSnapshotsRequest, database.ListAvailableSnapshotsResponse](
 			httpClient,
 			baseURL+DatabaseServiceListAvailableSnapshotsProcedure,
-			connect.WithSchema(databaseServiceMethods.ByName("ListAvailableSnapshots")),
+			connect.WithSchema(mustConnectMethod(databaseServiceMethods, "DatabaseService", "ListAvailableSnapshots")),
 			connect.WithClientOptions(opts...),
 		),
 		truncate: connect.NewClient[database.TruncateRequest, database.TruncateResponse](
 			httpClient,
 			baseURL+DatabaseServiceTruncateProcedure,
-			connect.WithSchema(databaseServiceMethods.ByName("Truncate")),
+			connect.WithSchema(mustConnectMethod(databaseServiceMethods, "DatabaseService", "Truncate")),
 			connect.WithClientOptions(opts...),
 		),
 		getTruncateStatus: connect.NewClient[database.GetTruncateStatusRequest, database.GetTruncateStatusResponse](
 			httpClient,
 			baseURL+DatabaseServiceGetTruncateStatusProcedure,
-			connect.WithSchema(databaseServiceMethods.ByName("GetTruncateStatus")),
+			connect.WithSchema(mustConnectMethod(databaseServiceMethods, "DatabaseService", "GetTruncateStatus")),
 			connect.WithClientOptions(opts...),
 		),
 		streamOperationProgress: connect.NewClient[database.StreamOperationProgressRequest, database.StreamOperationProgressResponse](
 			httpClient,
 			baseURL+DatabaseServiceStreamOperationProgressProcedure,
-			connect.WithSchema(databaseServiceMethods.ByName("StreamOperationProgress")),
+			connect.WithSchema(mustConnectMethod(databaseServiceMethods, "DatabaseService", "StreamOperationProgress")),
 			connect.WithClientOptions(opts...),
 		),
 		getOperationHistory: connect.NewClient[database.GetOperationHistoryRequest, database.GetOperationHistoryResponse](
 			httpClient,
 			baseURL+DatabaseServiceGetOperationHistoryProcedure,
-			connect.WithSchema(databaseServiceMethods.ByName("GetOperationHistory")),
+			connect.WithSchema(mustConnectMethod(databaseServiceMethods, "DatabaseService", "GetOperationHistory")),
 			connect.WithClientOptions(opts...),
 		),
 		getDatabaseInfo: connect.NewClient[database.GetDatabaseInfoRequest, database.GetDatabaseInfoResponse](
 			httpClient,
 			baseURL+DatabaseServiceGetDatabaseInfoProcedure,
-			connect.WithSchema(databaseServiceMethods.ByName("GetDatabaseInfo")),
+			connect.WithSchema(mustConnectMethod(databaseServiceMethods, "DatabaseService", "GetDatabaseInfo")),
 			connect.WithClientOptions(opts...),
 		),
 		cancelOperation: connect.NewClient[database.CancelOperationRequest, database.CancelOperationResponse](
 			httpClient,
 			baseURL+DatabaseServiceCancelOperationProcedure,
-			connect.WithSchema(databaseServiceMethods.ByName("CancelOperation")),
+			connect.WithSchema(mustConnectMethod(databaseServiceMethods, "DatabaseService", "CancelOperation")),
 			connect.WithClientOptions(opts...),
 		),
 	}
@@ -347,89 +364,89 @@ type DatabaseServiceHandler interface {
 // By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
 // and JSON codecs. They also support gzip compression.
 func NewDatabaseServiceHandler(svc DatabaseServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
-	databaseServiceMethods := database.File_v1alpha1_database_database_proto.Services().ByName("DatabaseService").Methods()
+	databaseServiceMethods := mustConnectServiceMethods(database.File_v1alpha1_database_database_proto.Services(), "DatabaseService")
 	databaseServiceCreateSnapshotHandler := connect.NewUnaryHandler(
 		DatabaseServiceCreateSnapshotProcedure,
 		svc.CreateSnapshot,
-		connect.WithSchema(databaseServiceMethods.ByName("CreateSnapshot")),
+		connect.WithSchema(mustConnectMethod(databaseServiceMethods, "DatabaseService", "CreateSnapshot")),
 		connect.WithHandlerOptions(opts...),
 	)
 	databaseServiceGetSnapshotStatusHandler := connect.NewUnaryHandler(
 		DatabaseServiceGetSnapshotStatusProcedure,
 		svc.GetSnapshotStatus,
-		connect.WithSchema(databaseServiceMethods.ByName("GetSnapshotStatus")),
+		connect.WithSchema(mustConnectMethod(databaseServiceMethods, "DatabaseService", "GetSnapshotStatus")),
 		connect.WithHandlerOptions(opts...),
 	)
 	databaseServiceListSnapshotsHandler := connect.NewUnaryHandler(
 		DatabaseServiceListSnapshotsProcedure,
 		svc.ListSnapshots,
-		connect.WithSchema(databaseServiceMethods.ByName("ListSnapshots")),
+		connect.WithSchema(mustConnectMethod(databaseServiceMethods, "DatabaseService", "ListSnapshots")),
 		connect.WithHandlerOptions(opts...),
 	)
 	databaseServiceDeleteSnapshotHandler := connect.NewUnaryHandler(
 		DatabaseServiceDeleteSnapshotProcedure,
 		svc.DeleteSnapshot,
-		connect.WithSchema(databaseServiceMethods.ByName("DeleteSnapshot")),
+		connect.WithSchema(mustConnectMethod(databaseServiceMethods, "DatabaseService", "DeleteSnapshot")),
 		connect.WithHandlerOptions(opts...),
 	)
 	databaseServiceVerifySnapshotHandler := connect.NewUnaryHandler(
 		DatabaseServiceVerifySnapshotProcedure,
 		svc.VerifySnapshot,
-		connect.WithSchema(databaseServiceMethods.ByName("VerifySnapshot")),
+		connect.WithSchema(mustConnectMethod(databaseServiceMethods, "DatabaseService", "VerifySnapshot")),
 		connect.WithHandlerOptions(opts...),
 	)
 	databaseServiceRestoreHandler := connect.NewUnaryHandler(
 		DatabaseServiceRestoreProcedure,
 		svc.Restore,
-		connect.WithSchema(databaseServiceMethods.ByName("Restore")),
+		connect.WithSchema(mustConnectMethod(databaseServiceMethods, "DatabaseService", "Restore")),
 		connect.WithHandlerOptions(opts...),
 	)
 	databaseServiceGetRestoreStatusHandler := connect.NewUnaryHandler(
 		DatabaseServiceGetRestoreStatusProcedure,
 		svc.GetRestoreStatus,
-		connect.WithSchema(databaseServiceMethods.ByName("GetRestoreStatus")),
+		connect.WithSchema(mustConnectMethod(databaseServiceMethods, "DatabaseService", "GetRestoreStatus")),
 		connect.WithHandlerOptions(opts...),
 	)
 	databaseServiceListAvailableSnapshotsHandler := connect.NewUnaryHandler(
 		DatabaseServiceListAvailableSnapshotsProcedure,
 		svc.ListAvailableSnapshots,
-		connect.WithSchema(databaseServiceMethods.ByName("ListAvailableSnapshots")),
+		connect.WithSchema(mustConnectMethod(databaseServiceMethods, "DatabaseService", "ListAvailableSnapshots")),
 		connect.WithHandlerOptions(opts...),
 	)
 	databaseServiceTruncateHandler := connect.NewUnaryHandler(
 		DatabaseServiceTruncateProcedure,
 		svc.Truncate,
-		connect.WithSchema(databaseServiceMethods.ByName("Truncate")),
+		connect.WithSchema(mustConnectMethod(databaseServiceMethods, "DatabaseService", "Truncate")),
 		connect.WithHandlerOptions(opts...),
 	)
 	databaseServiceGetTruncateStatusHandler := connect.NewUnaryHandler(
 		DatabaseServiceGetTruncateStatusProcedure,
 		svc.GetTruncateStatus,
-		connect.WithSchema(databaseServiceMethods.ByName("GetTruncateStatus")),
+		connect.WithSchema(mustConnectMethod(databaseServiceMethods, "DatabaseService", "GetTruncateStatus")),
 		connect.WithHandlerOptions(opts...),
 	)
 	databaseServiceStreamOperationProgressHandler := connect.NewServerStreamHandler(
 		DatabaseServiceStreamOperationProgressProcedure,
 		svc.StreamOperationProgress,
-		connect.WithSchema(databaseServiceMethods.ByName("StreamOperationProgress")),
+		connect.WithSchema(mustConnectMethod(databaseServiceMethods, "DatabaseService", "StreamOperationProgress")),
 		connect.WithHandlerOptions(opts...),
 	)
 	databaseServiceGetOperationHistoryHandler := connect.NewUnaryHandler(
 		DatabaseServiceGetOperationHistoryProcedure,
 		svc.GetOperationHistory,
-		connect.WithSchema(databaseServiceMethods.ByName("GetOperationHistory")),
+		connect.WithSchema(mustConnectMethod(databaseServiceMethods, "DatabaseService", "GetOperationHistory")),
 		connect.WithHandlerOptions(opts...),
 	)
 	databaseServiceGetDatabaseInfoHandler := connect.NewUnaryHandler(
 		DatabaseServiceGetDatabaseInfoProcedure,
 		svc.GetDatabaseInfo,
-		connect.WithSchema(databaseServiceMethods.ByName("GetDatabaseInfo")),
+		connect.WithSchema(mustConnectMethod(databaseServiceMethods, "DatabaseService", "GetDatabaseInfo")),
 		connect.WithHandlerOptions(opts...),
 	)
 	databaseServiceCancelOperationHandler := connect.NewUnaryHandler(
 		DatabaseServiceCancelOperationProcedure,
 		svc.CancelOperation,
-		connect.WithSchema(databaseServiceMethods.ByName("CancelOperation")),
+		connect.WithSchema(mustConnectMethod(databaseServiceMethods, "DatabaseService", "CancelOperation")),
 		connect.WithHandlerOptions(opts...),
 	)
 	return "/bark.v1alpha1.database.DatabaseService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

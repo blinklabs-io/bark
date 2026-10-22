@@ -37,7 +37,9 @@ jobs:
           setup_only: true
 
       - name: Generate Go code
-        run: buf generate
+        run: |
+          buf generate
+          python3 scripts/guard-connect-descriptors.py
 
       - name: Run go mod tidy
         run: go mod tidy
