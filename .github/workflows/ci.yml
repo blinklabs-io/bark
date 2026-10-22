@@ -63,10 +63,12 @@ jobs:
           buf generate
           python3 scripts/guard-connect-descriptors.py
           go mod tidy
-          git diff --exit-code || {
+          if ! git diff --exit-code || [ -n "$(git ls-files --others --exclude-standard)" ]; then
+            git diff --stat
+            git ls-files --others --exclude-standard
             echo "Generated code is out of date. Run 'buf generate && go mod tidy' to fix."
             exit 1
-          }
+          fi
 
   govulncheck:
     name: Vulnerability Scan
