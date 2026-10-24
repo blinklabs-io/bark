@@ -59,7 +59,7 @@ import (
 
 ### Prerequisites
 
-- Go 1.25+ (`go.mod` pins the `go1.25.14` toolchain, which the default `GOTOOLCHAIN=auto` fetches automatically)
+- Go 1.26.10 or newer
 - [buf](https://buf.build) CLI
 
 ### Setup
@@ -74,6 +74,7 @@ go mod download
 
 # Generate code from proto files
 buf generate
+python3 scripts/guard-connect-descriptors.py
 ```
 
 ### Common Commands

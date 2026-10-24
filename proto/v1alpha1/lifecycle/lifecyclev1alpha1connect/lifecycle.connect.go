@@ -9,6 +9,7 @@ import (
 	context "context"
 	errors "errors"
 	lifecycle "github.com/blinklabs-io/bark/proto/v1alpha1/lifecycle"
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	http "net/http"
 	strings "strings"
 )
@@ -19,6 +20,25 @@ import (
 // problem by either regenerating this code with an older version of connect or updating the connect
 // version compiled into your binary.
 const _ = connect.IsAtLeastVersion1_13_0
+
+func mustConnectServiceMethods(fileDescriptor protoreflect.FileDescriptor, serviceName string) protoreflect.MethodDescriptors {
+	if fileDescriptor == nil {
+		panic("generated Connect file descriptor missing for service: " + serviceName)
+	}
+	service := fileDescriptor.Services().ByName(protoreflect.Name(serviceName))
+	if service == nil {
+		panic("generated Connect service descriptor missing: " + serviceName)
+	}
+	return service.Methods()
+}
+
+func mustConnectMethod(methods protoreflect.MethodDescriptors, serviceName, methodName string) protoreflect.MethodDescriptor {
+	method := methods.ByName(protoreflect.Name(methodName))
+	if method == nil {
+		panic("generated Connect method descriptor missing: " + serviceName + "." + methodName)
+	}
+	return method
+}
 
 const (
 	// LifecycleServiceName is the fully-qualified name of the LifecycleService service.
@@ -72,24 +92,24 @@ type LifecycleServiceClient interface {
 // http://api.acme.com or https://acme.com/grpc).
 func NewLifecycleServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) LifecycleServiceClient {
 	baseURL = strings.TrimRight(baseURL, "/")
-	lifecycleServiceMethods := lifecycle.File_v1alpha1_lifecycle_lifecycle_proto.Services().ByName("LifecycleService").Methods()
+	lifecycleServiceMethods := mustConnectServiceMethods(lifecycle.File_v1alpha1_lifecycle_lifecycle_proto, "LifecycleService")
 	return &lifecycleServiceClient{
 		stop: connect.NewClient[lifecycle.StopRequest, lifecycle.StopResponse](
 			httpClient,
 			baseURL+LifecycleServiceStopProcedure,
-			connect.WithSchema(lifecycleServiceMethods.ByName("Stop")),
+			connect.WithSchema(mustConnectMethod(lifecycleServiceMethods, "LifecycleService", "Stop")),
 			connect.WithClientOptions(opts...),
 		),
 		restart: connect.NewClient[lifecycle.RestartRequest, lifecycle.RestartResponse](
 			httpClient,
 			baseURL+LifecycleServiceRestartProcedure,
-			connect.WithSchema(lifecycleServiceMethods.ByName("Restart")),
+			connect.WithSchema(mustConnectMethod(lifecycleServiceMethods, "LifecycleService", "Restart")),
 			connect.WithClientOptions(opts...),
 		),
 		getStatus: connect.NewClient[lifecycle.GetStatusRequest, lifecycle.GetStatusResponse](
 			httpClient,
 			baseURL+LifecycleServiceGetStatusProcedure,
-			connect.WithSchema(lifecycleServiceMethods.ByName("GetStatus")),
+			connect.WithSchema(mustConnectMethod(lifecycleServiceMethods, "LifecycleService", "GetStatus")),
 			connect.WithClientOptions(opts...),
 		),
 	}
@@ -144,23 +164,23 @@ type LifecycleServiceHandler interface {
 // By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
 // and JSON codecs. They also support gzip compression.
 func NewLifecycleServiceHandler(svc LifecycleServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
-	lifecycleServiceMethods := lifecycle.File_v1alpha1_lifecycle_lifecycle_proto.Services().ByName("LifecycleService").Methods()
+	lifecycleServiceMethods := mustConnectServiceMethods(lifecycle.File_v1alpha1_lifecycle_lifecycle_proto, "LifecycleService")
 	lifecycleServiceStopHandler := connect.NewUnaryHandler(
 		LifecycleServiceStopProcedure,
 		svc.Stop,
-		connect.WithSchema(lifecycleServiceMethods.ByName("Stop")),
+		connect.WithSchema(mustConnectMethod(lifecycleServiceMethods, "LifecycleService", "Stop")),
 		connect.WithHandlerOptions(opts...),
 	)
 	lifecycleServiceRestartHandler := connect.NewUnaryHandler(
 		LifecycleServiceRestartProcedure,
 		svc.Restart,
-		connect.WithSchema(lifecycleServiceMethods.ByName("Restart")),
+		connect.WithSchema(mustConnectMethod(lifecycleServiceMethods, "LifecycleService", "Restart")),
 		connect.WithHandlerOptions(opts...),
 	)
 	lifecycleServiceGetStatusHandler := connect.NewUnaryHandler(
 		LifecycleServiceGetStatusProcedure,
 		svc.GetStatus,
-		connect.WithSchema(lifecycleServiceMethods.ByName("GetStatus")),
+		connect.WithSchema(mustConnectMethod(lifecycleServiceMethods, "LifecycleService", "GetStatus")),
 		connect.WithHandlerOptions(opts...),
 	)
 	return "/bark.v1alpha1.lifecycle.LifecycleService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

@@ -9,6 +9,7 @@ import (
 	context "context"
 	errors "errors"
 	archive "github.com/blinklabs-io/bark/proto/v1alpha1/archive"
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	http "net/http"
 	strings "strings"
 )
@@ -19,6 +20,25 @@ import (
 // problem by either regenerating this code with an older version of connect or updating the connect
 // version compiled into your binary.
 const _ = connect.IsAtLeastVersion1_13_0
+
+func mustConnectServiceMethods(fileDescriptor protoreflect.FileDescriptor, serviceName string) protoreflect.MethodDescriptors {
+	if fileDescriptor == nil {
+		panic("generated Connect file descriptor missing for service: " + serviceName)
+	}
+	service := fileDescriptor.Services().ByName(protoreflect.Name(serviceName))
+	if service == nil {
+		panic("generated Connect service descriptor missing: " + serviceName)
+	}
+	return service.Methods()
+}
+
+func mustConnectMethod(methods protoreflect.MethodDescriptors, serviceName, methodName string) protoreflect.MethodDescriptor {
+	method := methods.ByName(protoreflect.Name(methodName))
+	if method == nil {
+		panic("generated Connect method descriptor missing: " + serviceName + "." + methodName)
+	}
+	return method
+}
 
 const (
 	// ArchiveServiceName is the fully-qualified name of the ArchiveService service.
@@ -54,12 +74,12 @@ type ArchiveServiceClient interface {
 // http://api.acme.com or https://acme.com/grpc).
 func NewArchiveServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) ArchiveServiceClient {
 	baseURL = strings.TrimRight(baseURL, "/")
-	archiveServiceMethods := archive.File_v1alpha1_archive_archive_proto.Services().ByName("ArchiveService").Methods()
+	archiveServiceMethods := mustConnectServiceMethods(archive.File_v1alpha1_archive_archive_proto, "ArchiveService")
 	return &archiveServiceClient{
 		fetchBlock: connect.NewClient[archive.FetchBlockRequest, archive.FetchBlockResponse](
 			httpClient,
 			baseURL+ArchiveServiceFetchBlockProcedure,
-			connect.WithSchema(archiveServiceMethods.ByName("FetchBlock")),
+			connect.WithSchema(mustConnectMethod(archiveServiceMethods, "ArchiveService", "FetchBlock")),
 			connect.WithClientOptions(opts...),
 		),
 	}
@@ -88,11 +108,11 @@ type ArchiveServiceHandler interface {
 // By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
 // and JSON codecs. They also support gzip compression.
 func NewArchiveServiceHandler(svc ArchiveServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
-	archiveServiceMethods := archive.File_v1alpha1_archive_archive_proto.Services().ByName("ArchiveService").Methods()
+	archiveServiceMethods := mustConnectServiceMethods(archive.File_v1alpha1_archive_archive_proto, "ArchiveService")
 	archiveServiceFetchBlockHandler := connect.NewUnaryHandler(
 		ArchiveServiceFetchBlockProcedure,
 		svc.FetchBlock,
-		connect.WithSchema(archiveServiceMethods.ByName("FetchBlock")),
+		connect.WithSchema(mustConnectMethod(archiveServiceMethods, "ArchiveService", "FetchBlock")),
 		connect.WithHandlerOptions(opts...),
 	)
 	return "/bark.v1alpha1.archive.ArchiveService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
