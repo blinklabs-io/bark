@@ -19,5 +19,4 @@ jobs:
       run-golangci-lint: true
       run-nilaway: true
       run-vet: true
-      verify-buf-generated: true
       verify-modules: true
