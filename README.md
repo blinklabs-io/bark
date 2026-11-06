@@ -60,7 +60,9 @@ import (
 ### Prerequisites
 
 - Go 1.26.10 or newer
-- [buf](https://buf.build) CLI
+- make and Python 3 (`make generate` runs a Python script)
+- [buf](https://buf.build) CLI, golines, nilaway, and golangci-lint, installed
+  by `make install-tools`
 
 ### Setup
 
@@ -72,8 +74,10 @@ cd bark
 # Install dependencies
 go mod download
 
-# Install buf, nilaway, and golangci-lint (needs Go)
+# Install buf, golines, nilaway, and golangci-lint into the Go bin directory
+# and put that directory on PATH
 make install-tools
+export PATH="$PATH:$(go env GOPATH)/bin"
 
 # Generate code from proto files
 make generate
