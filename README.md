@@ -72,25 +72,33 @@ cd bark
 # Install dependencies
 go mod download
 
+# Install buf, nilaway, and golangci-lint (needs Go)
+make install-tools
+
 # Generate code from proto files
-buf generate
-python3 scripts/guard-connect-descriptors.py
+make generate
 ```
 
 ### Common Commands
 
 ```bash
-# Format proto files
-buf format -w
+# Format proto and Go files
+make format
 
-# Lint proto files
-buf lint
+# Lint proto and Go code
+make lint
 
 # Build Go code
-go build ./...
+make build
 
 # Run tests
-go test ./...
+make test
+
+# Run the checks CI runs
+make check
+
+# List every target
+make help
 ```
 
 ## Protocol

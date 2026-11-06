@@ -25,15 +25,8 @@ jobs:
           setup_only: true
           version: 1.71.0
 
-      - name: Buf format check
-        run: |
-          buf format -d || {
-            echo "Proto files are not formatted. Run 'buf format -w' to fix."
-            exit 1
-          }
-
-      - name: Buf lint
-        run: buf lint
+      - name: Buf format check and lint
+        run: make lint-proto
 
   go:
     name: Go Build
@@ -61,16 +54,7 @@ jobs:
         run: go build ./...
 
       - name: Verify generated code is up to date
-        run: |
-          buf generate
-          python3 scripts/guard-connect-descriptors.py
-          go mod tidy
-          if ! git diff --exit-code || [ -n "$(git ls-files --others --exclude-standard)" ]; then
-            git diff --stat
-            git ls-files --others --exclude-standard
-            echo "Generated code is out of date. Run 'buf generate && python3 scripts/guard-connect-descriptors.py && go mod tidy' to fix."
-            exit 1
-          fi
+        run: make generate-check
 
   govulncheck:
     name: Vulnerability Scan
@@ -89,6 +73,4 @@ jobs:
           cache: true
 
       - name: Run govulncheck
-        run: |
-          go install golang.org/x/vuln/cmd/govulncheck@v1.7.0
-          govulncheck ./...
+        run: make govulncheck
