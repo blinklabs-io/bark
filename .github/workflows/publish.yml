@@ -38,12 +38,7 @@ jobs:
           version: 1.71.0
 
       - name: Generate Go code
-        run: |
-          buf generate
-          python3 scripts/guard-connect-descriptors.py
-
-      - name: Run go mod tidy
-        run: go mod tidy
+        run: make generate
 
       - name: Commit generated code
         env:

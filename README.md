@@ -60,7 +60,9 @@ import (
 ### Prerequisites
 
 - Go 1.26.10 or newer
-- [buf](https://buf.build) CLI
+- make and Python 3 (`make generate` runs a Python script)
+- [buf](https://buf.build) CLI, golines, nilaway, and golangci-lint, installed
+  by `make install-tools`
 
 ### Setup
 
@@ -72,25 +74,35 @@ cd bark
 # Install dependencies
 go mod download
 
+# Install buf, golines, nilaway, and golangci-lint into the Go bin directory
+# and put that directory on PATH
+make install-tools
+export PATH="$PATH:$(go env GOPATH)/bin"
+
 # Generate code from proto files
-buf generate
-python3 scripts/guard-connect-descriptors.py
+make generate
 ```
 
 ### Common Commands
 
 ```bash
-# Format proto files
-buf format -w
+# Format proto and Go files
+make format
 
-# Lint proto files
-buf lint
+# Lint proto and Go code
+make lint
 
 # Build Go code
-go build ./...
+make build
 
 # Run tests
-go test ./...
+make test
+
+# Run the checks CI runs
+make check
+
+# List every target
+make help
 ```
 
 ## Protocol
