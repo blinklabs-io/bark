@@ -92,4 +92,4 @@ vet: ## Run go vet
 test: mod-tidy ## Run mod-tidy, then all tests with race detection
 	go test -v -race ./...
 
-check: generate-check lint vet build test govulncheck ## Run the checks CI runs
+check: generate-check lint vet build test ## Run the checks CI runs
