@@ -1,0 +1,141 @@
+syntax = "proto3";
+
+package bark.v1alpha1.event;
+
+import "google/protobuf/any.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/blinklabs-io/bark/proto/v1alpha1/event;eventv1alpha1";
+
+// EventService exposes a node's EventBus over the network so components can
+// exchange events the same way whether they share a process or not.
+//
+// Only event types in the node's registry (see ListEventTypes) can be
+// subscribed to or published. An unknown type is rejected with
+// INVALID_ARGUMENT.
+//
+// Access control: the protocol carries no credentials of its own, so what a
+// caller may do is decided by how a server exposes the service. A server
+// SHOULD offer it only on a trusted network or behind its own authentication,
+// and MAY reject a call with UNAUTHENTICATED or PERMISSION_DENIED.
+// Subscribe, SubscribeWithAck and ListEventTypes only read. Publish writes
+// into the receiving node's EventBus, so a server SHOULD leave it disabled
+// unless an operator turns it on, and a server that offers it MUST accept
+// only registered event types.
+service EventService {
+  // Subscribe streams events matching the filter until the client cancels or
+  // the server detaches it. Delivery is at-most-once: events published while
+  // the client is disconnected, or discarded because it fell behind, are not
+  // replayed. A subscriber that stops draining its stream is detached rather
+  // than allowed to stall the node; use SubscribeWithAck when events must
+  // not be lost.
+  rpc Subscribe(SubscribeRequest) returns (stream SubscribeResponse);
+
+  // SubscribeWithAck streams events with at-least-once delivery. The client
+  // sends a Start message first, then acknowledges events as it processes
+  // them. The server keeps unacknowledged events in a bounded buffer and
+  // redelivers them, so a client that reconnects with the last sequence it
+  // acknowledged receives everything after it. A client MUST tolerate
+  // duplicates and de-duplicate on Event.id.
+  rpc SubscribeWithAck(stream SubscribeWithAckRequest) returns (stream SubscribeWithAckResponse);
+
+  // Publish delivers an event to the receiving node's EventBus.
+  rpc Publish(PublishRequest) returns (PublishResponse);
+
+  // ListEventTypes returns the event types the node's registry accepts.
+  rpc ListEventTypes(ListEventTypesRequest) returns (ListEventTypesResponse);
+}
+
+// EventFilter selects which event types a subscriber receives.
+message EventFilter {
+  // Event types to receive, such as "chain.update". Empty selects every
+  // registered type.
+  repeated string event_types = 1;
+}
+
+// Event is the envelope for one event.
+message Event {
+  // Unique identifier, stable across redelivery. Subscribers de-duplicate
+  // on it.
+  string id = 1;
+
+  // Registered event type name, such as "chain.update".
+  string event_type = 2;
+
+  // Time the event was created on the originating node.
+  google.protobuf.Timestamp timestamp = 3;
+
+  // Identifier of the node that created the event. A node MUST NOT forward
+  // an event back to the node named here, which prevents loops between
+  // nodes.
+  string origin_node_id = 4;
+
+  // Position of the event in the serving node's delivery order. It is
+  // assigned by the server for each delivery stream, is strictly increasing
+  // within it, and is the cursor for resuming SubscribeWithAck. Zero on
+  // events sent to Publish.
+  uint64 sequence = 5;
+
+  // Typed payload for the event type, when the registry defines one.
+  google.protobuf.Any typed_data = 6;
+}
+
+message SubscribeRequest {
+  EventFilter filter = 1;
+}
+
+message SubscribeResponse {
+  Event event = 1;
+}
+
+// SubscribeWithAckStart opens a reliable subscription. It MUST be the first
+// message on the stream.
+message SubscribeWithAckStart {
+  EventFilter filter = 1;
+
+  // Identifies this subscription across reconnects. The server keeps the
+  // unacknowledged events of a subscriber_id for a bounded time after its
+  // stream closes.
+  string subscriber_id = 2;
+
+  // Sequence of the last event the client processed. The server resumes
+  // with the next event. Zero starts from the current position of the
+  // stream. If the requested position is no longer buffered, the server
+  // closes the stream with OUT_OF_RANGE, and the client must start over.
+  uint64 last_acked_sequence = 3;
+}
+
+// SubscribeWithAckAck acknowledges every event up to and including
+// sequence.
+message SubscribeWithAckAck {
+  uint64 sequence = 1;
+}
+
+message SubscribeWithAckRequest {
+  oneof message {
+    SubscribeWithAckStart start = 1;
+    SubscribeWithAckAck ack = 2;
+  }
+}
+
+message SubscribeWithAckResponse {
+  Event event = 1;
+}
+
+message PublishRequest {
+  Event event = 1;
+}
+
+message PublishResponse {}
+
+message ListEventTypesRequest {}
+
+message ListEventTypesResponse {
+  repeated EventTypeInfo event_types = 1;
+}
+
+// EventTypeInfo describes one registered event type.
+message EventTypeInfo {
+  // Event type name, such as "chain.update".
+  string name = 1;
+}

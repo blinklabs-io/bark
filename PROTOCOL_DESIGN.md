@@ -174,6 +174,50 @@ Dingo is responsible for implementing and enforcing this authentication/authoriz
 - Graceful timeout is explicit and observable via `GetStatus`, with a documented forced-exit fallback
 - Restart re-executes in place, picking up a replaced binary or changed configuration without external process supervision
 
+## Event Service Protocol (v1alpha1)
+
+The Event Service exposes a node's EventBus over the network, so components exchange events the same way whether they share a process or run in separate binaries.
+
+### Architecture
+
+Server: Dingo instance exposing its EventBus
+Client: another Dingo instance, dingoctl, or any consumer
+
+### Protocol Definition
+
+Location: `proto/v1alpha1/event/event.proto`
+
+Service: EventService
+- Subscribe(SubscribeRequest) returns (stream SubscribeResponse)
+- SubscribeWithAck(stream SubscribeWithAckRequest) returns (stream SubscribeWithAckResponse)
+- Publish(PublishRequest) returns (PublishResponse)
+- ListEventTypes(ListEventTypesRequest) returns (ListEventTypesResponse)
+
+Key messages:
+- Event: envelope with a stable `id`, `event_type`, `timestamp`, `origin_node_id`, a server-assigned `sequence`, and an optional `typed_data` payload
+- EventFilter: the event types a subscriber wants; empty selects every registered type
+- SubscribeWithAckStart: opens a reliable subscription with a `subscriber_id` and the `last_acked_sequence` to resume from
+- SubscribeWithAckAck: acknowledges every event up to a `sequence`
+
+### Delivery Semantics
+
+- `Subscribe` is at-most-once. A subscriber that stops draining its stream is detached; it never blocks the node.
+- `SubscribeWithAck` is at-least-once. The server redelivers unacknowledged events, and a client that reconnects with its last acknowledged `sequence` receives everything after it. Clients de-duplicate on `Event.id`.
+- If the requested resume position is no longer buffered, the server closes the stream with `OUT_OF_RANGE`.
+- A node must not forward an event back to the node named in `origin_node_id`.
+
+### Client and Registry
+
+- `eventtype` holds the registered event type names, the exact strings Dingo's EventBus uses. A rollback is carried by `chain.update`, not by a type of its own.
+- `eventclient` wraps the streams. `SubscribeWithAck` acknowledges an event after the handler returns, reconnects with backoff when the stream drops, resumes from the last acknowledged sequence, and skips events the server redelivers. It stops on `INVALID_ARGUMENT`, `UNAUTHENTICATED`, `PERMISSION_DENIED` and `OUT_OF_RANGE`, which retrying cannot fix.
+
+### Access Control
+
+The protocol carries no credentials, so a server decides who can reach the service. Offer it only on a trusted network or behind your own authentication; a server may reject a call with `UNAUTHENTICATED` or `PERMISSION_DENIED`.
+
+- Read-only: `Subscribe`, `SubscribeWithAck`, `ListEventTypes`
+- Mutating: `Publish` writes into the receiving node's EventBus. A server should leave it disabled unless an operator enables it, and a server that offers it must accept only registered event types.
+
 ## Versioning
 
 Package naming: `bark.v1alpha1.{module}`
@@ -208,6 +252,10 @@ proto/v1alpha1/              - Protocol buffer definitions and generated Go code
     lifecycle.proto          - Protocol buffer definition
     lifecycle.pb.go          - Generated protobuf Go code
     lifecyclev1alpha1connect/ - Generated ConnectRPC service code
+  event/                     - Event Service protocol
+    event.proto              - Protocol buffer definition
+    event.pb.go              - Generated protobuf Go code
+    eventv1alpha1connect/    - Generated ConnectRPC service code
 buf.gen.yaml                 - Code generation configuration
 buf.yaml                     - Buf module configuration
 ```
@@ -218,14 +266,15 @@ Completed:
 - Protocol buffer definition for Archive Proxy (proto/v1alpha1/archive/archive.proto)
 - Protocol buffer definition for Database Service (proto/v1alpha1/database/database.proto)
 - Protocol buffer definition for Lifecycle Service (proto/v1alpha1/lifecycle/lifecycle.proto)
+- Protocol buffer definition for Event Service (proto/v1alpha1/event/event.proto)
 - Buf configuration and code generation setup
 - Go module with ConnectRPC dependencies
-- Generated Go code for v1alpha1 archive, database, and lifecycle modules
+- Generated Go code for v1alpha1 archive, database, lifecycle, and event modules
 - CI/CD pipelines for linting, testing, and dependency management
 - Conventional commit enforcement
 
 In Progress:
-- Server implementation in Dingo (archive, database, and lifecycle services)
+- Server implementation in Dingo (archive, database, lifecycle, and event services)
 - Client implementation in Dingo / dingoctl
 - Integration testing
 

@@ -10,6 +10,7 @@ Current protocols:
 - **Archive Proxy**: efficient retrieval of immutable blockchain data via signed URLs to cloud object storage (S3, GCS, etc.)
 - **Database Service**: database lifecycle management: snapshots, restoration, and chain truncation with async progress streaming
 - **Lifecycle Service**: remote process-lifecycle control: graceful stop, graceful restart, and status reporting
+- **Event Service**: subscribe to and publish a node's EventBus events over the network, with an at-least-once variant that resumes after a disconnect
 
 ## Features
 
@@ -36,6 +37,10 @@ proto/v1alpha1/
     lifecycle.proto                  - Protocol buffer definition
     lifecycle.pb.go                  - Generated protobuf Go code
     lifecyclev1alpha1connect/        - Generated ConnectRPC service code
+  event/                             - Event Service protocol
+    event.proto                      - Protocol buffer definition
+    event.pb.go                      - Generated protobuf Go code
+    eventv1alpha1connect/            - Generated ConnectRPC service code
 ```
 
 ## Usage
@@ -124,6 +129,14 @@ Service for database lifecycle management with mutual exclusion enforcement.
 Service for remote process-lifecycle control: graceful stop, graceful restart (stop + re-execution), and status reporting. Requires mTLS-authenticated callers; only one of Stop or Restart may run at a time.
 
 **RPC Methods**: `Stop`, `Restart`, `GetStatus`
+
+### Event Service (v1alpha1)
+
+Service that exposes a node's EventBus over the network. `Subscribe` is at-most-once; `SubscribeWithAck` is at-least-once and resumes from the last acknowledged sequence after a disconnect. `Publish` writes into the node's EventBus, so a server may leave it disabled.
+
+**RPC Methods**: `Subscribe`, `SubscribeWithAck`, `Publish`, `ListEventTypes`
+
+The `eventtype` package lists the event types a node exposes, and the `eventclient` package wraps the Event Service streams: `SubscribeWithAck` reconnects and resumes from the last acknowledged sequence on its own.
 
 See [PROTOCOL_DESIGN.md](PROTOCOL_DESIGN.md) for detailed protocol documentation.
 
