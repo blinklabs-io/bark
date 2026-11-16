@@ -3,6 +3,7 @@ syntax = "proto3";
 package bark.v1alpha1.event;
 
 import "google/protobuf/any.proto";
+import "google/protobuf/descriptor.proto";
 import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/blinklabs-io/bark/proto/v1alpha1/event;eventv1alpha1";
@@ -42,8 +43,20 @@ service EventService {
   // Publish delivers an event to the receiving node's EventBus.
   rpc Publish(PublishRequest) returns (PublishResponse);
 
+  // PublishBatch delivers several events to the receiving node's EventBus.
+  // An event that cannot be delivered does not fail the call: the response
+  // carries one result per event, in request order. The call itself fails
+  // only for a reason that applies to every event, such as the service
+  // being disabled or the caller being rejected. The same access rules as
+  // Publish apply.
+  rpc PublishBatch(PublishBatchRequest) returns (PublishBatchResponse);
+
   // ListEventTypes returns the event types the node's registry accepts.
   rpc ListEventTypes(ListEventTypesRequest) returns (ListEventTypesResponse);
+
+  // GetEventSchema returns the schema of one event type. It fails with
+  // NOT_FOUND when the type is not in the registry.
+  rpc GetEventSchema(GetEventSchemaRequest) returns (GetEventSchemaResponse);
 }
 
 // EventFilter selects which event types a subscriber receives.
@@ -128,6 +141,45 @@ message PublishRequest {
 
 message PublishResponse {}
 
+message PublishBatchRequest {
+  repeated Event events = 1;
+}
+
+message PublishBatchResponse {
+  // One result for each event in the request, in the same order.
+  repeated PublishBatchResult results = 1;
+}
+
+// PublishBatchResult is the outcome of one event in a PublishBatch call.
+message PublishBatchResult {
+  // Id of the event this result is for.
+  string event_id = 1;
+
+  // Set when the event was not delivered. Unset means it was.
+  PublishFailure failure = 2;
+}
+
+// PublishFailure explains why one event in a batch was not delivered.
+message PublishFailure {
+  PublishFailureCode code = 1;
+
+  // Human-readable detail. Clients must not parse it.
+  string message = 2;
+}
+
+enum PublishFailureCode {
+  PUBLISH_FAILURE_CODE_UNSPECIFIED = 0;
+
+  // The event is malformed, for example it has no event type.
+  PUBLISH_FAILURE_CODE_INVALID_EVENT = 1;
+
+  // The event type is not in the registry.
+  PUBLISH_FAILURE_CODE_UNKNOWN_EVENT_TYPE = 2;
+
+  // The node failed to deliver the event.
+  PUBLISH_FAILURE_CODE_INTERNAL = 3;
+}
+
 message ListEventTypesRequest {}
 
 message ListEventTypesResponse {
@@ -138,4 +190,35 @@ message ListEventTypesResponse {
 message EventTypeInfo {
   // Event type name, such as "chain.update".
   string name = 1;
+
+  // Subsystem that emits the type, such as "chain". It is the part of the
+  // name before the first dot.
+  string category = 2;
+
+  // Short human-readable description of when the event is emitted.
+  string description = 3;
+
+  // Whether events of this type carry a typed payload in Event.typed_data.
+  // When false, typed_data is unset.
+  bool has_typed_payload = 4;
+}
+
+message GetEventSchemaRequest {
+  // Registered event type name, such as "chain.update".
+  string event_type = 1;
+}
+
+message GetEventSchemaResponse {
+  // Description of the event type.
+  EventTypeInfo info = 1;
+
+  // Fully qualified name of the message packed into Event.typed_data, such as
+  // "bark.v1alpha1.event.ChainUpdateEventData". Empty when the type has no
+  // typed payload.
+  string payload_message = 2;
+
+  // Definitions of payload_message and everything it references, so a client
+  // can decode and describe the payload without compiled-in knowledge of
+  // it. Empty when the type has no typed payload.
+  google.protobuf.FileDescriptorSet payload_descriptors = 3;
 }

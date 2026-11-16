@@ -58,6 +58,46 @@ func (f *fakeServer) Publish(
 	return connect.NewResponse(&eventv1alpha1.PublishResponse{}), nil
 }
 
+// PublishBatch rejects any event whose type is "bad" and accepts the rest, so
+// a test can see per-event failures come back beside successes.
+func (f *fakeServer) PublishBatch(
+	_ context.Context,
+	req *connect.Request[eventv1alpha1.PublishBatchRequest],
+) (*connect.Response[eventv1alpha1.PublishBatchResponse], error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	var results []*eventv1alpha1.PublishBatchResult
+	for _, ev := range req.Msg.GetEvents() {
+		res := &eventv1alpha1.PublishBatchResult{EventId: ev.GetId()}
+		if ev.GetEventType() == "bad" {
+			res.Failure = &eventv1alpha1.PublishFailure{
+				Code: eventv1alpha1.PublishFailureCode_PUBLISH_FAILURE_CODE_UNKNOWN_EVENT_TYPE,
+			}
+		} else {
+			f.published = append(f.published, ev)
+		}
+		results = append(results, res)
+	}
+	return connect.NewResponse(
+		&eventv1alpha1.PublishBatchResponse{Results: results},
+	), nil
+}
+
+func (f *fakeServer) GetEventSchema(
+	_ context.Context,
+	req *connect.Request[eventv1alpha1.GetEventSchemaRequest],
+) (*connect.Response[eventv1alpha1.GetEventSchemaResponse], error) {
+	if req.Msg.GetEventType() != "chain.update" {
+		return nil, connect.NewError(connect.CodeNotFound, nil)
+	}
+	return connect.NewResponse(&eventv1alpha1.GetEventSchemaResponse{
+		Info: &eventv1alpha1.EventTypeInfo{
+			Name:     "chain.update",
+			Category: "chain",
+		},
+	}), nil
+}
+
 func (f *fakeServer) Subscribe(
 	_ context.Context,
 	req *connect.Request[eventv1alpha1.SubscribeRequest],
@@ -162,6 +202,59 @@ func TestPublish(t *testing.T) {
 	defer srv.mu.Unlock()
 	if len(srv.published) != 1 || srv.published[0].GetId() != "x" {
 		t.Fatalf("server saw %v", srv.published)
+	}
+}
+
+// TestPublishBatchReportsFailuresPerEvent checks that a rejected event shows
+// up in its own result, in request order, while the call succeeds and the
+// other events are delivered.
+func TestPublishBatchReportsFailuresPerEvent(t *testing.T) {
+	srv := &fakeServer{}
+	c := newClient(t, srv)
+	results, err := c.PublishBatch(context.Background(), []*eventv1alpha1.Event{
+		{Id: "a", EventType: "chain.update"},
+		{Id: "b", EventType: "bad"},
+		{Id: "c", EventType: "mempool.add_tx"},
+	})
+	if err != nil {
+		t.Fatalf("a rejected event failed the whole batch: %v", err)
+	}
+	if len(results) != 3 {
+		t.Fatalf("got %d results, want 3", len(results))
+	}
+	for i, wantID := range []string{"a", "b", "c"} {
+		if results[i].GetEventId() != wantID {
+			t.Errorf("result %d is for %q, want %q", i, results[i].GetEventId(), wantID)
+		}
+	}
+	if results[0].GetFailure() != nil || results[2].GetFailure() != nil {
+		t.Error("accepted events reported a failure")
+	}
+	if results[1].GetFailure().GetCode() !=
+		eventv1alpha1.PublishFailureCode_PUBLISH_FAILURE_CODE_UNKNOWN_EVENT_TYPE {
+		t.Errorf("rejected event failure = %v", results[1].GetFailure())
+	}
+	srv.mu.Lock()
+	defer srv.mu.Unlock()
+	if len(srv.published) != 2 {
+		t.Fatalf("server delivered %d events, want 2", len(srv.published))
+	}
+}
+
+// TestGetEventSchema checks a known type's schema and that an unknown type
+// surfaces as NotFound.
+func TestGetEventSchema(t *testing.T) {
+	c := newClient(t, &fakeServer{})
+	got, err := c.GetEventSchema(context.Background(), "chain.update")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.GetInfo().GetCategory() != "chain" {
+		t.Fatalf("got %v", got)
+	}
+	_, err = c.GetEventSchema(context.Background(), "nope")
+	if connect.CodeOf(err) != connect.CodeNotFound {
+		t.Fatalf("got %v, want NotFound", err)
 	}
 }
 

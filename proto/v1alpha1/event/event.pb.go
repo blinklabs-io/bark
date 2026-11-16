@@ -9,6 +9,7 @@ package eventv1alpha1
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	descriptorpb "google.golang.org/protobuf/types/descriptorpb"
 	anypb "google.golang.org/protobuf/types/known/anypb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
@@ -22,6 +23,61 @@ const (
 	// Verify that runtime/protoimpl is sufficiently up-to-date.
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
+
+type PublishFailureCode int32
+
+const (
+	PublishFailureCode_PUBLISH_FAILURE_CODE_UNSPECIFIED PublishFailureCode = 0
+	// The event is malformed, for example it has no event type.
+	PublishFailureCode_PUBLISH_FAILURE_CODE_INVALID_EVENT PublishFailureCode = 1
+	// The event type is not in the registry.
+	PublishFailureCode_PUBLISH_FAILURE_CODE_UNKNOWN_EVENT_TYPE PublishFailureCode = 2
+	// The node failed to deliver the event.
+	PublishFailureCode_PUBLISH_FAILURE_CODE_INTERNAL PublishFailureCode = 3
+)
+
+// Enum value maps for PublishFailureCode.
+var (
+	PublishFailureCode_name = map[int32]string{
+		0: "PUBLISH_FAILURE_CODE_UNSPECIFIED",
+		1: "PUBLISH_FAILURE_CODE_INVALID_EVENT",
+		2: "PUBLISH_FAILURE_CODE_UNKNOWN_EVENT_TYPE",
+		3: "PUBLISH_FAILURE_CODE_INTERNAL",
+	}
+	PublishFailureCode_value = map[string]int32{
+		"PUBLISH_FAILURE_CODE_UNSPECIFIED":        0,
+		"PUBLISH_FAILURE_CODE_INVALID_EVENT":      1,
+		"PUBLISH_FAILURE_CODE_UNKNOWN_EVENT_TYPE": 2,
+		"PUBLISH_FAILURE_CODE_INTERNAL":           3,
+	}
+)
+
+func (x PublishFailureCode) Enum() *PublishFailureCode {
+	p := new(PublishFailureCode)
+	*p = x
+	return p
+}
+
+func (x PublishFailureCode) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (PublishFailureCode) Descriptor() protoreflect.EnumDescriptor {
+	return file_v1alpha1_event_event_proto_enumTypes[0].Descriptor()
+}
+
+func (PublishFailureCode) Type() protoreflect.EnumType {
+	return &file_v1alpha1_event_event_proto_enumTypes[0]
+}
+
+func (x PublishFailureCode) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use PublishFailureCode.Descriptor instead.
+func (PublishFailureCode) EnumDescriptor() ([]byte, []int) {
+	return file_v1alpha1_event_event_proto_rawDescGZIP(), []int{0}
+}
 
 // EventFilter selects which event types a subscriber receives.
 type EventFilter struct {
@@ -576,6 +632,204 @@ func (*PublishResponse) Descriptor() ([]byte, []int) {
 	return file_v1alpha1_event_event_proto_rawDescGZIP(), []int{9}
 }
 
+type PublishBatchRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Events        []*Event               `protobuf:"bytes,1,rep,name=events,proto3" json:"events,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PublishBatchRequest) Reset() {
+	*x = PublishBatchRequest{}
+	mi := &file_v1alpha1_event_event_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PublishBatchRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PublishBatchRequest) ProtoMessage() {}
+
+func (x *PublishBatchRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_v1alpha1_event_event_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PublishBatchRequest.ProtoReflect.Descriptor instead.
+func (*PublishBatchRequest) Descriptor() ([]byte, []int) {
+	return file_v1alpha1_event_event_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *PublishBatchRequest) GetEvents() []*Event {
+	if x != nil {
+		return x.Events
+	}
+	return nil
+}
+
+type PublishBatchResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// One result for each event in the request, in the same order.
+	Results       []*PublishBatchResult `protobuf:"bytes,1,rep,name=results,proto3" json:"results,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PublishBatchResponse) Reset() {
+	*x = PublishBatchResponse{}
+	mi := &file_v1alpha1_event_event_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PublishBatchResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PublishBatchResponse) ProtoMessage() {}
+
+func (x *PublishBatchResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_v1alpha1_event_event_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PublishBatchResponse.ProtoReflect.Descriptor instead.
+func (*PublishBatchResponse) Descriptor() ([]byte, []int) {
+	return file_v1alpha1_event_event_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *PublishBatchResponse) GetResults() []*PublishBatchResult {
+	if x != nil {
+		return x.Results
+	}
+	return nil
+}
+
+// PublishBatchResult is the outcome of one event in a PublishBatch call.
+type PublishBatchResult struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Id of the event this result is for.
+	EventId string `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	// Set when the event was not delivered. Unset means it was.
+	Failure       *PublishFailure `protobuf:"bytes,2,opt,name=failure,proto3" json:"failure,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PublishBatchResult) Reset() {
+	*x = PublishBatchResult{}
+	mi := &file_v1alpha1_event_event_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PublishBatchResult) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PublishBatchResult) ProtoMessage() {}
+
+func (x *PublishBatchResult) ProtoReflect() protoreflect.Message {
+	mi := &file_v1alpha1_event_event_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PublishBatchResult.ProtoReflect.Descriptor instead.
+func (*PublishBatchResult) Descriptor() ([]byte, []int) {
+	return file_v1alpha1_event_event_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *PublishBatchResult) GetEventId() string {
+	if x != nil {
+		return x.EventId
+	}
+	return ""
+}
+
+func (x *PublishBatchResult) GetFailure() *PublishFailure {
+	if x != nil {
+		return x.Failure
+	}
+	return nil
+}
+
+// PublishFailure explains why one event in a batch was not delivered.
+type PublishFailure struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Code  PublishFailureCode     `protobuf:"varint,1,opt,name=code,proto3,enum=bark.v1alpha1.event.PublishFailureCode" json:"code,omitempty"`
+	// Human-readable detail. Clients must not parse it.
+	Message       string `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PublishFailure) Reset() {
+	*x = PublishFailure{}
+	mi := &file_v1alpha1_event_event_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PublishFailure) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PublishFailure) ProtoMessage() {}
+
+func (x *PublishFailure) ProtoReflect() protoreflect.Message {
+	mi := &file_v1alpha1_event_event_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PublishFailure.ProtoReflect.Descriptor instead.
+func (*PublishFailure) Descriptor() ([]byte, []int) {
+	return file_v1alpha1_event_event_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *PublishFailure) GetCode() PublishFailureCode {
+	if x != nil {
+		return x.Code
+	}
+	return PublishFailureCode_PUBLISH_FAILURE_CODE_UNSPECIFIED
+}
+
+func (x *PublishFailure) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
 type ListEventTypesRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -584,7 +838,7 @@ type ListEventTypesRequest struct {
 
 func (x *ListEventTypesRequest) Reset() {
 	*x = ListEventTypesRequest{}
-	mi := &file_v1alpha1_event_event_proto_msgTypes[10]
+	mi := &file_v1alpha1_event_event_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -596,7 +850,7 @@ func (x *ListEventTypesRequest) String() string {
 func (*ListEventTypesRequest) ProtoMessage() {}
 
 func (x *ListEventTypesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_event_event_proto_msgTypes[10]
+	mi := &file_v1alpha1_event_event_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -609,7 +863,7 @@ func (x *ListEventTypesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListEventTypesRequest.ProtoReflect.Descriptor instead.
 func (*ListEventTypesRequest) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_event_event_proto_rawDescGZIP(), []int{10}
+	return file_v1alpha1_event_event_proto_rawDescGZIP(), []int{14}
 }
 
 type ListEventTypesResponse struct {
@@ -621,7 +875,7 @@ type ListEventTypesResponse struct {
 
 func (x *ListEventTypesResponse) Reset() {
 	*x = ListEventTypesResponse{}
-	mi := &file_v1alpha1_event_event_proto_msgTypes[11]
+	mi := &file_v1alpha1_event_event_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -633,7 +887,7 @@ func (x *ListEventTypesResponse) String() string {
 func (*ListEventTypesResponse) ProtoMessage() {}
 
 func (x *ListEventTypesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_event_event_proto_msgTypes[11]
+	mi := &file_v1alpha1_event_event_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -646,7 +900,7 @@ func (x *ListEventTypesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListEventTypesResponse.ProtoReflect.Descriptor instead.
 func (*ListEventTypesResponse) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_event_event_proto_rawDescGZIP(), []int{11}
+	return file_v1alpha1_event_event_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *ListEventTypesResponse) GetEventTypes() []*EventTypeInfo {
@@ -660,14 +914,22 @@ func (x *ListEventTypesResponse) GetEventTypes() []*EventTypeInfo {
 type EventTypeInfo struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Event type name, such as "chain.update".
-	Name          string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// Subsystem that emits the type, such as "chain". It is the part of the
+	// name before the first dot.
+	Category string `protobuf:"bytes,2,opt,name=category,proto3" json:"category,omitempty"`
+	// Short human-readable description of when the event is emitted.
+	Description string `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	// Whether events of this type carry a typed payload in Event.typed_data.
+	// When false, typed_data is unset.
+	HasTypedPayload bool `protobuf:"varint,4,opt,name=has_typed_payload,json=hasTypedPayload,proto3" json:"has_typed_payload,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *EventTypeInfo) Reset() {
 	*x = EventTypeInfo{}
-	mi := &file_v1alpha1_event_event_proto_msgTypes[12]
+	mi := &file_v1alpha1_event_event_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -679,7 +941,7 @@ func (x *EventTypeInfo) String() string {
 func (*EventTypeInfo) ProtoMessage() {}
 
 func (x *EventTypeInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_event_event_proto_msgTypes[12]
+	mi := &file_v1alpha1_event_event_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -692,7 +954,7 @@ func (x *EventTypeInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EventTypeInfo.ProtoReflect.Descriptor instead.
 func (*EventTypeInfo) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_event_event_proto_rawDescGZIP(), []int{12}
+	return file_v1alpha1_event_event_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *EventTypeInfo) GetName() string {
@@ -702,11 +964,144 @@ func (x *EventTypeInfo) GetName() string {
 	return ""
 }
 
+func (x *EventTypeInfo) GetCategory() string {
+	if x != nil {
+		return x.Category
+	}
+	return ""
+}
+
+func (x *EventTypeInfo) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *EventTypeInfo) GetHasTypedPayload() bool {
+	if x != nil {
+		return x.HasTypedPayload
+	}
+	return false
+}
+
+type GetEventSchemaRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Registered event type name, such as "chain.update".
+	EventType     string `protobuf:"bytes,1,opt,name=event_type,json=eventType,proto3" json:"event_type,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetEventSchemaRequest) Reset() {
+	*x = GetEventSchemaRequest{}
+	mi := &file_v1alpha1_event_event_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetEventSchemaRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetEventSchemaRequest) ProtoMessage() {}
+
+func (x *GetEventSchemaRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_v1alpha1_event_event_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetEventSchemaRequest.ProtoReflect.Descriptor instead.
+func (*GetEventSchemaRequest) Descriptor() ([]byte, []int) {
+	return file_v1alpha1_event_event_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *GetEventSchemaRequest) GetEventType() string {
+	if x != nil {
+		return x.EventType
+	}
+	return ""
+}
+
+type GetEventSchemaResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Description of the event type.
+	Info *EventTypeInfo `protobuf:"bytes,1,opt,name=info,proto3" json:"info,omitempty"`
+	// Fully qualified name of the message packed into Event.typed_data, such as
+	// "bark.v1alpha1.event.ChainUpdateEventData". Empty when the type has no
+	// typed payload.
+	PayloadMessage string `protobuf:"bytes,2,opt,name=payload_message,json=payloadMessage,proto3" json:"payload_message,omitempty"`
+	// Definitions of payload_message and everything it references, so a client
+	// can decode and describe the payload without compiled-in knowledge of
+	// it. Empty when the type has no typed payload.
+	PayloadDescriptors *descriptorpb.FileDescriptorSet `protobuf:"bytes,3,opt,name=payload_descriptors,json=payloadDescriptors,proto3" json:"payload_descriptors,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *GetEventSchemaResponse) Reset() {
+	*x = GetEventSchemaResponse{}
+	mi := &file_v1alpha1_event_event_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetEventSchemaResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetEventSchemaResponse) ProtoMessage() {}
+
+func (x *GetEventSchemaResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_v1alpha1_event_event_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetEventSchemaResponse.ProtoReflect.Descriptor instead.
+func (*GetEventSchemaResponse) Descriptor() ([]byte, []int) {
+	return file_v1alpha1_event_event_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *GetEventSchemaResponse) GetInfo() *EventTypeInfo {
+	if x != nil {
+		return x.Info
+	}
+	return nil
+}
+
+func (x *GetEventSchemaResponse) GetPayloadMessage() string {
+	if x != nil {
+		return x.PayloadMessage
+	}
+	return ""
+}
+
+func (x *GetEventSchemaResponse) GetPayloadDescriptors() *descriptorpb.FileDescriptorSet {
+	if x != nil {
+		return x.PayloadDescriptors
+	}
+	return nil
+}
+
 var File_v1alpha1_event_event_proto protoreflect.FileDescriptor
 
 const file_v1alpha1_event_event_proto_rawDesc = "" +
 	"\n" +
-	"\x1av1alpha1/event/event.proto\x12\x13bark.v1alpha1.event\x1a\x19google/protobuf/any.proto\x1a\x1fgoogle/protobuf/timestamp.proto\".\n" +
+	"\x1av1alpha1/event/event.proto\x12\x13bark.v1alpha1.event\x1a\x19google/protobuf/any.proto\x1a google/protobuf/descriptor.proto\x1a\x1fgoogle/protobuf/timestamp.proto\".\n" +
 	"\vEventFilter\x12\x1f\n" +
 	"\vevent_types\x18\x01 \x03(\tR\n" +
 	"eventTypes\"\xe7\x01\n" +
@@ -737,18 +1132,45 @@ const file_v1alpha1_event_event_proto_rawDesc = "" +
 	"\x05event\x18\x01 \x01(\v2\x1a.bark.v1alpha1.event.EventR\x05event\"B\n" +
 	"\x0ePublishRequest\x120\n" +
 	"\x05event\x18\x01 \x01(\v2\x1a.bark.v1alpha1.event.EventR\x05event\"\x11\n" +
-	"\x0fPublishResponse\"\x17\n" +
+	"\x0fPublishResponse\"I\n" +
+	"\x13PublishBatchRequest\x122\n" +
+	"\x06events\x18\x01 \x03(\v2\x1a.bark.v1alpha1.event.EventR\x06events\"Y\n" +
+	"\x14PublishBatchResponse\x12A\n" +
+	"\aresults\x18\x01 \x03(\v2'.bark.v1alpha1.event.PublishBatchResultR\aresults\"n\n" +
+	"\x12PublishBatchResult\x12\x19\n" +
+	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12=\n" +
+	"\afailure\x18\x02 \x01(\v2#.bark.v1alpha1.event.PublishFailureR\afailure\"g\n" +
+	"\x0ePublishFailure\x12;\n" +
+	"\x04code\x18\x01 \x01(\x0e2'.bark.v1alpha1.event.PublishFailureCodeR\x04code\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"\x17\n" +
 	"\x15ListEventTypesRequest\"]\n" +
 	"\x16ListEventTypesResponse\x12C\n" +
 	"\vevent_types\x18\x01 \x03(\v2\".bark.v1alpha1.event.EventTypeInfoR\n" +
-	"eventTypes\"#\n" +
+	"eventTypes\"\x8d\x01\n" +
 	"\rEventTypeInfo\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name2\xa2\x03\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1a\n" +
+	"\bcategory\x18\x02 \x01(\tR\bcategory\x12 \n" +
+	"\vdescription\x18\x03 \x01(\tR\vdescription\x12*\n" +
+	"\x11has_typed_payload\x18\x04 \x01(\bR\x0fhasTypedPayload\"6\n" +
+	"\x15GetEventSchemaRequest\x12\x1d\n" +
+	"\n" +
+	"event_type\x18\x01 \x01(\tR\teventType\"\xce\x01\n" +
+	"\x16GetEventSchemaResponse\x126\n" +
+	"\x04info\x18\x01 \x01(\v2\".bark.v1alpha1.event.EventTypeInfoR\x04info\x12'\n" +
+	"\x0fpayload_message\x18\x02 \x01(\tR\x0epayloadMessage\x12S\n" +
+	"\x13payload_descriptors\x18\x03 \x01(\v2\".google.protobuf.FileDescriptorSetR\x12payloadDescriptors*\xb2\x01\n" +
+	"\x12PublishFailureCode\x12$\n" +
+	" PUBLISH_FAILURE_CODE_UNSPECIFIED\x10\x00\x12&\n" +
+	"\"PUBLISH_FAILURE_CODE_INVALID_EVENT\x10\x01\x12+\n" +
+	"'PUBLISH_FAILURE_CODE_UNKNOWN_EVENT_TYPE\x10\x02\x12!\n" +
+	"\x1dPUBLISH_FAILURE_CODE_INTERNAL\x10\x032\xf2\x04\n" +
 	"\fEventService\x12\\\n" +
 	"\tSubscribe\x12%.bark.v1alpha1.event.SubscribeRequest\x1a&.bark.v1alpha1.event.SubscribeResponse0\x01\x12s\n" +
 	"\x10SubscribeWithAck\x12,.bark.v1alpha1.event.SubscribeWithAckRequest\x1a-.bark.v1alpha1.event.SubscribeWithAckResponse(\x010\x01\x12T\n" +
-	"\aPublish\x12#.bark.v1alpha1.event.PublishRequest\x1a$.bark.v1alpha1.event.PublishResponse\x12i\n" +
-	"\x0eListEventTypes\x12*.bark.v1alpha1.event.ListEventTypesRequest\x1a+.bark.v1alpha1.event.ListEventTypesResponseB\xd4\x01\n" +
+	"\aPublish\x12#.bark.v1alpha1.event.PublishRequest\x1a$.bark.v1alpha1.event.PublishResponse\x12c\n" +
+	"\fPublishBatch\x12(.bark.v1alpha1.event.PublishBatchRequest\x1a).bark.v1alpha1.event.PublishBatchResponse\x12i\n" +
+	"\x0eListEventTypes\x12*.bark.v1alpha1.event.ListEventTypesRequest\x1a+.bark.v1alpha1.event.ListEventTypesResponse\x12i\n" +
+	"\x0eGetEventSchema\x12*.bark.v1alpha1.event.GetEventSchemaRequest\x1a+.bark.v1alpha1.event.GetEventSchemaResponseB\xd4\x01\n" +
 	"\x17com.bark.v1alpha1.eventB\n" +
 	"EventProtoP\x01Z?github.com/blinklabs-io/bark/proto/v1alpha1/event;eventv1alpha1\xa2\x02\x03BVE\xaa\x02\x13Bark.V1alpha1.Event\xca\x02\x13Bark\\V1alpha1\\Event\xe2\x02\x1fBark\\V1alpha1\\Event\\GPBMetadata\xea\x02\x15Bark::V1alpha1::Eventb\x06proto3"
 
@@ -764,48 +1186,67 @@ func file_v1alpha1_event_event_proto_rawDescGZIP() []byte {
 	return file_v1alpha1_event_event_proto_rawDescData
 }
 
-var file_v1alpha1_event_event_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
+var file_v1alpha1_event_event_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_v1alpha1_event_event_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
 var file_v1alpha1_event_event_proto_goTypes = []any{
-	(*EventFilter)(nil),              // 0: bark.v1alpha1.event.EventFilter
-	(*Event)(nil),                    // 1: bark.v1alpha1.event.Event
-	(*SubscribeRequest)(nil),         // 2: bark.v1alpha1.event.SubscribeRequest
-	(*SubscribeResponse)(nil),        // 3: bark.v1alpha1.event.SubscribeResponse
-	(*SubscribeWithAckStart)(nil),    // 4: bark.v1alpha1.event.SubscribeWithAckStart
-	(*SubscribeWithAckAck)(nil),      // 5: bark.v1alpha1.event.SubscribeWithAckAck
-	(*SubscribeWithAckRequest)(nil),  // 6: bark.v1alpha1.event.SubscribeWithAckRequest
-	(*SubscribeWithAckResponse)(nil), // 7: bark.v1alpha1.event.SubscribeWithAckResponse
-	(*PublishRequest)(nil),           // 8: bark.v1alpha1.event.PublishRequest
-	(*PublishResponse)(nil),          // 9: bark.v1alpha1.event.PublishResponse
-	(*ListEventTypesRequest)(nil),    // 10: bark.v1alpha1.event.ListEventTypesRequest
-	(*ListEventTypesResponse)(nil),   // 11: bark.v1alpha1.event.ListEventTypesResponse
-	(*EventTypeInfo)(nil),            // 12: bark.v1alpha1.event.EventTypeInfo
-	(*timestamppb.Timestamp)(nil),    // 13: google.protobuf.Timestamp
-	(*anypb.Any)(nil),                // 14: google.protobuf.Any
+	(PublishFailureCode)(0),                // 0: bark.v1alpha1.event.PublishFailureCode
+	(*EventFilter)(nil),                    // 1: bark.v1alpha1.event.EventFilter
+	(*Event)(nil),                          // 2: bark.v1alpha1.event.Event
+	(*SubscribeRequest)(nil),               // 3: bark.v1alpha1.event.SubscribeRequest
+	(*SubscribeResponse)(nil),              // 4: bark.v1alpha1.event.SubscribeResponse
+	(*SubscribeWithAckStart)(nil),          // 5: bark.v1alpha1.event.SubscribeWithAckStart
+	(*SubscribeWithAckAck)(nil),            // 6: bark.v1alpha1.event.SubscribeWithAckAck
+	(*SubscribeWithAckRequest)(nil),        // 7: bark.v1alpha1.event.SubscribeWithAckRequest
+	(*SubscribeWithAckResponse)(nil),       // 8: bark.v1alpha1.event.SubscribeWithAckResponse
+	(*PublishRequest)(nil),                 // 9: bark.v1alpha1.event.PublishRequest
+	(*PublishResponse)(nil),                // 10: bark.v1alpha1.event.PublishResponse
+	(*PublishBatchRequest)(nil),            // 11: bark.v1alpha1.event.PublishBatchRequest
+	(*PublishBatchResponse)(nil),           // 12: bark.v1alpha1.event.PublishBatchResponse
+	(*PublishBatchResult)(nil),             // 13: bark.v1alpha1.event.PublishBatchResult
+	(*PublishFailure)(nil),                 // 14: bark.v1alpha1.event.PublishFailure
+	(*ListEventTypesRequest)(nil),          // 15: bark.v1alpha1.event.ListEventTypesRequest
+	(*ListEventTypesResponse)(nil),         // 16: bark.v1alpha1.event.ListEventTypesResponse
+	(*EventTypeInfo)(nil),                  // 17: bark.v1alpha1.event.EventTypeInfo
+	(*GetEventSchemaRequest)(nil),          // 18: bark.v1alpha1.event.GetEventSchemaRequest
+	(*GetEventSchemaResponse)(nil),         // 19: bark.v1alpha1.event.GetEventSchemaResponse
+	(*timestamppb.Timestamp)(nil),          // 20: google.protobuf.Timestamp
+	(*anypb.Any)(nil),                      // 21: google.protobuf.Any
+	(*descriptorpb.FileDescriptorSet)(nil), // 22: google.protobuf.FileDescriptorSet
 }
 var file_v1alpha1_event_event_proto_depIdxs = []int32{
-	13, // 0: bark.v1alpha1.event.Event.timestamp:type_name -> google.protobuf.Timestamp
-	14, // 1: bark.v1alpha1.event.Event.typed_data:type_name -> google.protobuf.Any
-	0,  // 2: bark.v1alpha1.event.SubscribeRequest.filter:type_name -> bark.v1alpha1.event.EventFilter
-	1,  // 3: bark.v1alpha1.event.SubscribeResponse.event:type_name -> bark.v1alpha1.event.Event
-	0,  // 4: bark.v1alpha1.event.SubscribeWithAckStart.filter:type_name -> bark.v1alpha1.event.EventFilter
-	4,  // 5: bark.v1alpha1.event.SubscribeWithAckRequest.start:type_name -> bark.v1alpha1.event.SubscribeWithAckStart
-	5,  // 6: bark.v1alpha1.event.SubscribeWithAckRequest.ack:type_name -> bark.v1alpha1.event.SubscribeWithAckAck
-	1,  // 7: bark.v1alpha1.event.SubscribeWithAckResponse.event:type_name -> bark.v1alpha1.event.Event
-	1,  // 8: bark.v1alpha1.event.PublishRequest.event:type_name -> bark.v1alpha1.event.Event
-	12, // 9: bark.v1alpha1.event.ListEventTypesResponse.event_types:type_name -> bark.v1alpha1.event.EventTypeInfo
-	2,  // 10: bark.v1alpha1.event.EventService.Subscribe:input_type -> bark.v1alpha1.event.SubscribeRequest
-	6,  // 11: bark.v1alpha1.event.EventService.SubscribeWithAck:input_type -> bark.v1alpha1.event.SubscribeWithAckRequest
-	8,  // 12: bark.v1alpha1.event.EventService.Publish:input_type -> bark.v1alpha1.event.PublishRequest
-	10, // 13: bark.v1alpha1.event.EventService.ListEventTypes:input_type -> bark.v1alpha1.event.ListEventTypesRequest
-	3,  // 14: bark.v1alpha1.event.EventService.Subscribe:output_type -> bark.v1alpha1.event.SubscribeResponse
-	7,  // 15: bark.v1alpha1.event.EventService.SubscribeWithAck:output_type -> bark.v1alpha1.event.SubscribeWithAckResponse
-	9,  // 16: bark.v1alpha1.event.EventService.Publish:output_type -> bark.v1alpha1.event.PublishResponse
-	11, // 17: bark.v1alpha1.event.EventService.ListEventTypes:output_type -> bark.v1alpha1.event.ListEventTypesResponse
-	14, // [14:18] is the sub-list for method output_type
-	10, // [10:14] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	20, // 0: bark.v1alpha1.event.Event.timestamp:type_name -> google.protobuf.Timestamp
+	21, // 1: bark.v1alpha1.event.Event.typed_data:type_name -> google.protobuf.Any
+	1,  // 2: bark.v1alpha1.event.SubscribeRequest.filter:type_name -> bark.v1alpha1.event.EventFilter
+	2,  // 3: bark.v1alpha1.event.SubscribeResponse.event:type_name -> bark.v1alpha1.event.Event
+	1,  // 4: bark.v1alpha1.event.SubscribeWithAckStart.filter:type_name -> bark.v1alpha1.event.EventFilter
+	5,  // 5: bark.v1alpha1.event.SubscribeWithAckRequest.start:type_name -> bark.v1alpha1.event.SubscribeWithAckStart
+	6,  // 6: bark.v1alpha1.event.SubscribeWithAckRequest.ack:type_name -> bark.v1alpha1.event.SubscribeWithAckAck
+	2,  // 7: bark.v1alpha1.event.SubscribeWithAckResponse.event:type_name -> bark.v1alpha1.event.Event
+	2,  // 8: bark.v1alpha1.event.PublishRequest.event:type_name -> bark.v1alpha1.event.Event
+	2,  // 9: bark.v1alpha1.event.PublishBatchRequest.events:type_name -> bark.v1alpha1.event.Event
+	13, // 10: bark.v1alpha1.event.PublishBatchResponse.results:type_name -> bark.v1alpha1.event.PublishBatchResult
+	14, // 11: bark.v1alpha1.event.PublishBatchResult.failure:type_name -> bark.v1alpha1.event.PublishFailure
+	0,  // 12: bark.v1alpha1.event.PublishFailure.code:type_name -> bark.v1alpha1.event.PublishFailureCode
+	17, // 13: bark.v1alpha1.event.ListEventTypesResponse.event_types:type_name -> bark.v1alpha1.event.EventTypeInfo
+	17, // 14: bark.v1alpha1.event.GetEventSchemaResponse.info:type_name -> bark.v1alpha1.event.EventTypeInfo
+	22, // 15: bark.v1alpha1.event.GetEventSchemaResponse.payload_descriptors:type_name -> google.protobuf.FileDescriptorSet
+	3,  // 16: bark.v1alpha1.event.EventService.Subscribe:input_type -> bark.v1alpha1.event.SubscribeRequest
+	7,  // 17: bark.v1alpha1.event.EventService.SubscribeWithAck:input_type -> bark.v1alpha1.event.SubscribeWithAckRequest
+	9,  // 18: bark.v1alpha1.event.EventService.Publish:input_type -> bark.v1alpha1.event.PublishRequest
+	11, // 19: bark.v1alpha1.event.EventService.PublishBatch:input_type -> bark.v1alpha1.event.PublishBatchRequest
+	15, // 20: bark.v1alpha1.event.EventService.ListEventTypes:input_type -> bark.v1alpha1.event.ListEventTypesRequest
+	18, // 21: bark.v1alpha1.event.EventService.GetEventSchema:input_type -> bark.v1alpha1.event.GetEventSchemaRequest
+	4,  // 22: bark.v1alpha1.event.EventService.Subscribe:output_type -> bark.v1alpha1.event.SubscribeResponse
+	8,  // 23: bark.v1alpha1.event.EventService.SubscribeWithAck:output_type -> bark.v1alpha1.event.SubscribeWithAckResponse
+	10, // 24: bark.v1alpha1.event.EventService.Publish:output_type -> bark.v1alpha1.event.PublishResponse
+	12, // 25: bark.v1alpha1.event.EventService.PublishBatch:output_type -> bark.v1alpha1.event.PublishBatchResponse
+	16, // 26: bark.v1alpha1.event.EventService.ListEventTypes:output_type -> bark.v1alpha1.event.ListEventTypesResponse
+	19, // 27: bark.v1alpha1.event.EventService.GetEventSchema:output_type -> bark.v1alpha1.event.GetEventSchemaResponse
+	22, // [22:28] is the sub-list for method output_type
+	16, // [16:22] is the sub-list for method input_type
+	16, // [16:16] is the sub-list for extension type_name
+	16, // [16:16] is the sub-list for extension extendee
+	0,  // [0:16] is the sub-list for field type_name
 }
 
 func init() { file_v1alpha1_event_event_proto_init() }
@@ -822,13 +1263,14 @@ func file_v1alpha1_event_event_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1alpha1_event_event_proto_rawDesc), len(file_v1alpha1_event_event_proto_rawDesc)),
-			NumEnums:      0,
-			NumMessages:   13,
+			NumEnums:      1,
+			NumMessages:   19,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_v1alpha1_event_event_proto_goTypes,
 		DependencyIndexes: file_v1alpha1_event_event_proto_depIdxs,
+		EnumInfos:         file_v1alpha1_event_event_proto_enumTypes,
 		MessageInfos:      file_v1alpha1_event_event_proto_msgTypes,
 	}.Build()
 	File_v1alpha1_event_event_proto = out.File

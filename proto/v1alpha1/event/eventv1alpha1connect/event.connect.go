@@ -60,9 +60,15 @@ const (
 	EventServiceSubscribeWithAckProcedure = "/bark.v1alpha1.event.EventService/SubscribeWithAck"
 	// EventServicePublishProcedure is the fully-qualified name of the EventService's Publish RPC.
 	EventServicePublishProcedure = "/bark.v1alpha1.event.EventService/Publish"
+	// EventServicePublishBatchProcedure is the fully-qualified name of the EventService's PublishBatch
+	// RPC.
+	EventServicePublishBatchProcedure = "/bark.v1alpha1.event.EventService/PublishBatch"
 	// EventServiceListEventTypesProcedure is the fully-qualified name of the EventService's
 	// ListEventTypes RPC.
 	EventServiceListEventTypesProcedure = "/bark.v1alpha1.event.EventService/ListEventTypes"
+	// EventServiceGetEventSchemaProcedure is the fully-qualified name of the EventService's
+	// GetEventSchema RPC.
+	EventServiceGetEventSchemaProcedure = "/bark.v1alpha1.event.EventService/GetEventSchema"
 )
 
 // EventServiceClient is a client for the bark.v1alpha1.event.EventService service.
@@ -83,8 +89,18 @@ type EventServiceClient interface {
 	SubscribeWithAck(context.Context) *connect.BidiStreamForClient[event.SubscribeWithAckRequest, event.SubscribeWithAckResponse]
 	// Publish delivers an event to the receiving node's EventBus.
 	Publish(context.Context, *connect.Request[event.PublishRequest]) (*connect.Response[event.PublishResponse], error)
+	// PublishBatch delivers several events to the receiving node's EventBus.
+	// An event that cannot be delivered does not fail the call: the response
+	// carries one result per event, in request order. The call itself fails
+	// only for a reason that applies to every event, such as the service
+	// being disabled or the caller being rejected. The same access rules as
+	// Publish apply.
+	PublishBatch(context.Context, *connect.Request[event.PublishBatchRequest]) (*connect.Response[event.PublishBatchResponse], error)
 	// ListEventTypes returns the event types the node's registry accepts.
 	ListEventTypes(context.Context, *connect.Request[event.ListEventTypesRequest]) (*connect.Response[event.ListEventTypesResponse], error)
+	// GetEventSchema returns the schema of one event type. It fails with
+	// NOT_FOUND when the type is not in the registry.
+	GetEventSchema(context.Context, *connect.Request[event.GetEventSchemaRequest]) (*connect.Response[event.GetEventSchemaResponse], error)
 }
 
 // NewEventServiceClient constructs a client for the bark.v1alpha1.event.EventService service. By
@@ -116,10 +132,22 @@ func NewEventServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(mustConnectMethod(eventServiceMethods, "EventService", "Publish")),
 			connect.WithClientOptions(opts...),
 		),
+		publishBatch: connect.NewClient[event.PublishBatchRequest, event.PublishBatchResponse](
+			httpClient,
+			baseURL+EventServicePublishBatchProcedure,
+			connect.WithSchema(mustConnectMethod(eventServiceMethods, "EventService", "PublishBatch")),
+			connect.WithClientOptions(opts...),
+		),
 		listEventTypes: connect.NewClient[event.ListEventTypesRequest, event.ListEventTypesResponse](
 			httpClient,
 			baseURL+EventServiceListEventTypesProcedure,
 			connect.WithSchema(mustConnectMethod(eventServiceMethods, "EventService", "ListEventTypes")),
+			connect.WithClientOptions(opts...),
+		),
+		getEventSchema: connect.NewClient[event.GetEventSchemaRequest, event.GetEventSchemaResponse](
+			httpClient,
+			baseURL+EventServiceGetEventSchemaProcedure,
+			connect.WithSchema(mustConnectMethod(eventServiceMethods, "EventService", "GetEventSchema")),
 			connect.WithClientOptions(opts...),
 		),
 	}
@@ -130,7 +158,9 @@ type eventServiceClient struct {
 	subscribe        *connect.Client[event.SubscribeRequest, event.SubscribeResponse]
 	subscribeWithAck *connect.Client[event.SubscribeWithAckRequest, event.SubscribeWithAckResponse]
 	publish          *connect.Client[event.PublishRequest, event.PublishResponse]
+	publishBatch     *connect.Client[event.PublishBatchRequest, event.PublishBatchResponse]
 	listEventTypes   *connect.Client[event.ListEventTypesRequest, event.ListEventTypesResponse]
+	getEventSchema   *connect.Client[event.GetEventSchemaRequest, event.GetEventSchemaResponse]
 }
 
 // Subscribe calls bark.v1alpha1.event.EventService.Subscribe.
@@ -148,9 +178,19 @@ func (c *eventServiceClient) Publish(ctx context.Context, req *connect.Request[e
 	return c.publish.CallUnary(ctx, req)
 }
 
+// PublishBatch calls bark.v1alpha1.event.EventService.PublishBatch.
+func (c *eventServiceClient) PublishBatch(ctx context.Context, req *connect.Request[event.PublishBatchRequest]) (*connect.Response[event.PublishBatchResponse], error) {
+	return c.publishBatch.CallUnary(ctx, req)
+}
+
 // ListEventTypes calls bark.v1alpha1.event.EventService.ListEventTypes.
 func (c *eventServiceClient) ListEventTypes(ctx context.Context, req *connect.Request[event.ListEventTypesRequest]) (*connect.Response[event.ListEventTypesResponse], error) {
 	return c.listEventTypes.CallUnary(ctx, req)
+}
+
+// GetEventSchema calls bark.v1alpha1.event.EventService.GetEventSchema.
+func (c *eventServiceClient) GetEventSchema(ctx context.Context, req *connect.Request[event.GetEventSchemaRequest]) (*connect.Response[event.GetEventSchemaResponse], error) {
+	return c.getEventSchema.CallUnary(ctx, req)
 }
 
 // EventServiceHandler is an implementation of the bark.v1alpha1.event.EventService service.
@@ -171,8 +211,18 @@ type EventServiceHandler interface {
 	SubscribeWithAck(context.Context, *connect.BidiStream[event.SubscribeWithAckRequest, event.SubscribeWithAckResponse]) error
 	// Publish delivers an event to the receiving node's EventBus.
 	Publish(context.Context, *connect.Request[event.PublishRequest]) (*connect.Response[event.PublishResponse], error)
+	// PublishBatch delivers several events to the receiving node's EventBus.
+	// An event that cannot be delivered does not fail the call: the response
+	// carries one result per event, in request order. The call itself fails
+	// only for a reason that applies to every event, such as the service
+	// being disabled or the caller being rejected. The same access rules as
+	// Publish apply.
+	PublishBatch(context.Context, *connect.Request[event.PublishBatchRequest]) (*connect.Response[event.PublishBatchResponse], error)
 	// ListEventTypes returns the event types the node's registry accepts.
 	ListEventTypes(context.Context, *connect.Request[event.ListEventTypesRequest]) (*connect.Response[event.ListEventTypesResponse], error)
+	// GetEventSchema returns the schema of one event type. It fails with
+	// NOT_FOUND when the type is not in the registry.
+	GetEventSchema(context.Context, *connect.Request[event.GetEventSchemaRequest]) (*connect.Response[event.GetEventSchemaResponse], error)
 }
 
 // NewEventServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -200,10 +250,22 @@ func NewEventServiceHandler(svc EventServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(mustConnectMethod(eventServiceMethods, "EventService", "Publish")),
 		connect.WithHandlerOptions(opts...),
 	)
+	eventServicePublishBatchHandler := connect.NewUnaryHandler(
+		EventServicePublishBatchProcedure,
+		svc.PublishBatch,
+		connect.WithSchema(mustConnectMethod(eventServiceMethods, "EventService", "PublishBatch")),
+		connect.WithHandlerOptions(opts...),
+	)
 	eventServiceListEventTypesHandler := connect.NewUnaryHandler(
 		EventServiceListEventTypesProcedure,
 		svc.ListEventTypes,
 		connect.WithSchema(mustConnectMethod(eventServiceMethods, "EventService", "ListEventTypes")),
+		connect.WithHandlerOptions(opts...),
+	)
+	eventServiceGetEventSchemaHandler := connect.NewUnaryHandler(
+		EventServiceGetEventSchemaProcedure,
+		svc.GetEventSchema,
+		connect.WithSchema(mustConnectMethod(eventServiceMethods, "EventService", "GetEventSchema")),
 		connect.WithHandlerOptions(opts...),
 	)
 	return "/bark.v1alpha1.event.EventService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -214,8 +276,12 @@ func NewEventServiceHandler(svc EventServiceHandler, opts ...connect.HandlerOpti
 			eventServiceSubscribeWithAckHandler.ServeHTTP(w, r)
 		case EventServicePublishProcedure:
 			eventServicePublishHandler.ServeHTTP(w, r)
+		case EventServicePublishBatchProcedure:
+			eventServicePublishBatchHandler.ServeHTTP(w, r)
 		case EventServiceListEventTypesProcedure:
 			eventServiceListEventTypesHandler.ServeHTTP(w, r)
+		case EventServiceGetEventSchemaProcedure:
+			eventServiceGetEventSchemaHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -237,6 +303,14 @@ func (UnimplementedEventServiceHandler) Publish(context.Context, *connect.Reques
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("bark.v1alpha1.event.EventService.Publish is not implemented"))
 }
 
+func (UnimplementedEventServiceHandler) PublishBatch(context.Context, *connect.Request[event.PublishBatchRequest]) (*connect.Response[event.PublishBatchResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("bark.v1alpha1.event.EventService.PublishBatch is not implemented"))
+}
+
 func (UnimplementedEventServiceHandler) ListEventTypes(context.Context, *connect.Request[event.ListEventTypesRequest]) (*connect.Response[event.ListEventTypesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("bark.v1alpha1.event.EventService.ListEventTypes is not implemented"))
+}
+
+func (UnimplementedEventServiceHandler) GetEventSchema(context.Context, *connect.Request[event.GetEventSchemaRequest]) (*connect.Response[event.GetEventSchemaResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("bark.v1alpha1.event.EventService.GetEventSchema is not implemented"))
 }

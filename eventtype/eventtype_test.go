@@ -51,3 +51,30 @@ func TestRegisteredReturnsACopy(t *testing.T) {
 		t.Fatal("Registered exposed the internal slice")
 	}
 }
+
+// TestInfosMatchRegistered checks that each description is filled in, its
+// category is the name's prefix, and Lookup finds it.
+func TestInfosMatchRegistered(t *testing.T) {
+	names := eventtype.Registered()
+	infos := eventtype.Infos()
+	if len(infos) != len(names) {
+		t.Fatalf("got %d infos for %d names", len(infos), len(names))
+	}
+	for i, info := range infos {
+		if info.Name != names[i] {
+			t.Errorf("info %d is %q, want %q", i, info.Name, names[i])
+		}
+		if prefix, _, _ := strings.Cut(info.Name, "."); info.Category != prefix {
+			t.Errorf("%q has category %q, want %q", info.Name, info.Category, prefix)
+		}
+		if info.Description == "" {
+			t.Errorf("%q has no description", info.Name)
+		}
+		if got, ok := eventtype.Lookup(info.Name); !ok || got != info {
+			t.Errorf("Lookup(%q) = %v, %v", info.Name, got, ok)
+		}
+	}
+	if _, ok := eventtype.Lookup("chain.rollback"); ok {
+		t.Error("Lookup found an unregistered type")
+	}
+}
