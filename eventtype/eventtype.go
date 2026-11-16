@@ -25,26 +25,23 @@ const (
 	OutboundConn      = "peergov.outbound_conn"
 )
 
-// Chain events.
+// Chain events. A rollback is carried by ChainUpdate, not by a type of its
+// own.
 const (
 	ChainUpdate       = "chain.update"
-	ChainRollback     = "chain.rollback"
 	ChainForkDetected = "chain.fork_detected"
+)
+
+// Epoch events.
+const (
+	EpochTransition = "epoch.transition"
 )
 
 // Ledger events.
 const (
-	LedgerSyncStateChanged     = "ledger.sync_state_changed"
-	LedgerEpochTransitioned    = "ledger.epoch_transitioned"
-	LedgerProtocolParamsUpdate = "ledger.protocol_params_updated"
-	LedgerError                = "ledger.error"
-	LedgerBlockfetch           = "ledger.blockfetch"
-	LedgerChainsync            = "ledger.chainsync"
-)
-
-// Database events.
-const (
-	DatabaseOperation = "database.operation"
+	LedgerError      = "ledger.error"
+	LedgerBlockfetch = "ledger.blockfetch"
+	LedgerChainsync  = "ledger.chainsync"
 )
 
 // Mempool events.
@@ -99,12 +96,9 @@ var registered = []Info{
 	info(BootstrapRecovery, "peergov", "The node returned to its bootstrap peers."),
 	info(QuotaStatus, "peergov", "Peer governance reported its peer quota status."),
 	info(OutboundConn, "peergov", "An outbound connection to a peer was made."),
-	typed(ChainUpdate, "chain", "A block was added to the chain.", &eventv1alpha1.ChainUpdateEventData{}),
-	typed(ChainRollback, "chain", "The chain rolled back to an earlier point.", &eventv1alpha1.ChainRollbackEventData{}),
+	typed(ChainUpdate, "chain", "The chain tip changed, by a new block or a rollback.", &eventv1alpha1.ChainUpdateEventData{}),
 	info(ChainForkDetected, "chain", "A chain fork was detected."),
-	typed(LedgerSyncStateChanged, "ledger", "The ledger's chain sync state changed.", &eventv1alpha1.SyncStateEventData{}),
-	typed(LedgerEpochTransitioned, "ledger", "The ledger crossed an epoch boundary.", &eventv1alpha1.EpochTransitionEventData{}),
-	info(LedgerProtocolParamsUpdate, "ledger", "The protocol parameters changed."),
+	typed(EpochTransition, "epoch", "The chain crossed an epoch boundary.", &eventv1alpha1.EpochTransitionEventData{}),
 	info(LedgerError, "ledger", "The ledger reported an error."),
 	info(LedgerBlockfetch, "ledger", "A blockfetch protocol event reached the ledger."),
 	info(LedgerChainsync, "ledger", "A chainsync protocol event reached the ledger."),
@@ -112,7 +106,6 @@ var registered = []Info{
 	typed(MempoolRemoveTx, "mempool", "A transaction was removed from the mempool.", &eventv1alpha1.TransactionEventData{}),
 	typed(ConnManagerInboundConn, "connmanager", "An inbound connection was accepted.", &eventv1alpha1.ConnectionEventData{}),
 	typed(ConnManagerConnClosed, "connmanager", "A connection was closed.", &eventv1alpha1.ConnectionEventData{}),
-	typed(DatabaseOperation, "database", "A database operation changed state.", &eventv1alpha1.DatabaseOperationEventData{}),
 }
 
 // Registered returns the name of every registered event type. The caller may

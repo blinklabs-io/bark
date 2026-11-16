@@ -7,7 +7,6 @@
 package eventv1alpha1
 
 import (
-	database "github.com/blinklabs-io/bark/proto/v1alpha1/database"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -263,8 +262,9 @@ func (x *PeerChurnEventData) GetReason() string {
 	return ""
 }
 
-// ChainUpdateEventData is the payload of chain.update: a block added to the
-// chain.
+// ChainUpdateEventData is the payload of chain.update. It reports either a
+// block added to the chain or a rollback: when rollback is set the block
+// fields are unset.
 type ChainUpdateEventData struct {
 	state       protoimpl.MessageState `protogen:"open.v1"`
 	Slot        uint64                 `protobuf:"varint,1,opt,name=slot,proto3" json:"slot,omitempty"`
@@ -275,7 +275,9 @@ type ChainUpdateEventData struct {
 	// Epoch the block's slot falls in.
 	Epoch uint64 `protobuf:"varint,5,opt,name=epoch,proto3" json:"epoch,omitempty"`
 	// Number of transactions in the block.
-	TxCount       uint32 `protobuf:"varint,6,opt,name=tx_count,json=txCount,proto3" json:"tx_count,omitempty"`
+	TxCount uint32 `protobuf:"varint,6,opt,name=tx_count,json=txCount,proto3" json:"tx_count,omitempty"`
+	// Set when the event reports a rollback instead of a block.
+	Rollback      *ChainRollbackEventData `protobuf:"bytes,7,opt,name=rollback,proto3" json:"rollback,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -352,7 +354,14 @@ func (x *ChainUpdateEventData) GetTxCount() uint32 {
 	return 0
 }
 
-// ChainRollbackEventData is the payload of chain.rollback.
+func (x *ChainUpdateEventData) GetRollback() *ChainRollbackEventData {
+	if x != nil {
+		return x.Rollback
+	}
+	return nil
+}
+
+// ChainRollbackEventData describes a rollback reported by chain.update.
 type ChainRollbackEventData struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Slot of the tip before the rollback.
@@ -424,78 +433,7 @@ func (x *ChainRollbackEventData) GetNewTipHash() []byte {
 	return nil
 }
 
-// SyncStateEventData is the payload of ledger.sync_state_changed.
-type SyncStateEventData struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// Sync state before and after the change, such as "syncing" or "synced".
-	PreviousState string `protobuf:"bytes,1,opt,name=previous_state,json=previousState,proto3" json:"previous_state,omitempty"`
-	CurrentState  string `protobuf:"bytes,2,opt,name=current_state,json=currentState,proto3" json:"current_state,omitempty"`
-	TipSlot       uint64 `protobuf:"varint,3,opt,name=tip_slot,json=tipSlot,proto3" json:"tip_slot,omitempty"`
-	// Estimated slots behind the network tip. Zero when synced.
-	SlotsBehind   uint64 `protobuf:"varint,4,opt,name=slots_behind,json=slotsBehind,proto3" json:"slots_behind,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *SyncStateEventData) Reset() {
-	*x = SyncStateEventData{}
-	mi := &file_v1alpha1_event_payload_proto_msgTypes[3]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *SyncStateEventData) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*SyncStateEventData) ProtoMessage() {}
-
-func (x *SyncStateEventData) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_event_payload_proto_msgTypes[3]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use SyncStateEventData.ProtoReflect.Descriptor instead.
-func (*SyncStateEventData) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_event_payload_proto_rawDescGZIP(), []int{3}
-}
-
-func (x *SyncStateEventData) GetPreviousState() string {
-	if x != nil {
-		return x.PreviousState
-	}
-	return ""
-}
-
-func (x *SyncStateEventData) GetCurrentState() string {
-	if x != nil {
-		return x.CurrentState
-	}
-	return ""
-}
-
-func (x *SyncStateEventData) GetTipSlot() uint64 {
-	if x != nil {
-		return x.TipSlot
-	}
-	return 0
-}
-
-func (x *SyncStateEventData) GetSlotsBehind() uint64 {
-	if x != nil {
-		return x.SlotsBehind
-	}
-	return 0
-}
-
-// EpochTransitionEventData is the payload of ledger.epoch_transitioned.
+// EpochTransitionEventData is the payload of epoch.transition.
 type EpochTransitionEventData struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	PreviousEpoch uint64                 `protobuf:"varint,1,opt,name=previous_epoch,json=previousEpoch,proto3" json:"previous_epoch,omitempty"`
@@ -510,7 +448,7 @@ type EpochTransitionEventData struct {
 
 func (x *EpochTransitionEventData) Reset() {
 	*x = EpochTransitionEventData{}
-	mi := &file_v1alpha1_event_payload_proto_msgTypes[4]
+	mi := &file_v1alpha1_event_payload_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -522,7 +460,7 @@ func (x *EpochTransitionEventData) String() string {
 func (*EpochTransitionEventData) ProtoMessage() {}
 
 func (x *EpochTransitionEventData) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_event_payload_proto_msgTypes[4]
+	mi := &file_v1alpha1_event_payload_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -535,7 +473,7 @@ func (x *EpochTransitionEventData) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EpochTransitionEventData.ProtoReflect.Descriptor instead.
 func (*EpochTransitionEventData) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_event_payload_proto_rawDescGZIP(), []int{4}
+	return file_v1alpha1_event_payload_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *EpochTransitionEventData) GetPreviousEpoch() uint64 {
@@ -586,7 +524,7 @@ type TransactionEventData struct {
 
 func (x *TransactionEventData) Reset() {
 	*x = TransactionEventData{}
-	mi := &file_v1alpha1_event_payload_proto_msgTypes[5]
+	mi := &file_v1alpha1_event_payload_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -598,7 +536,7 @@ func (x *TransactionEventData) String() string {
 func (*TransactionEventData) ProtoMessage() {}
 
 func (x *TransactionEventData) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_event_payload_proto_msgTypes[5]
+	mi := &file_v1alpha1_event_payload_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -611,7 +549,7 @@ func (x *TransactionEventData) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TransactionEventData.ProtoReflect.Descriptor instead.
 func (*TransactionEventData) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_event_payload_proto_rawDescGZIP(), []int{5}
+	return file_v1alpha1_event_payload_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *TransactionEventData) GetTxHash() string {
@@ -659,7 +597,7 @@ type ConnectionEventData struct {
 
 func (x *ConnectionEventData) Reset() {
 	*x = ConnectionEventData{}
-	mi := &file_v1alpha1_event_payload_proto_msgTypes[6]
+	mi := &file_v1alpha1_event_payload_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -671,7 +609,7 @@ func (x *ConnectionEventData) String() string {
 func (*ConnectionEventData) ProtoMessage() {}
 
 func (x *ConnectionEventData) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_event_payload_proto_msgTypes[6]
+	mi := &file_v1alpha1_event_payload_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -684,7 +622,7 @@ func (x *ConnectionEventData) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConnectionEventData.ProtoReflect.Descriptor instead.
 func (*ConnectionEventData) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_event_payload_proto_rawDescGZIP(), []int{6}
+	return file_v1alpha1_event_payload_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *ConnectionEventData) GetAddress() string {
@@ -715,89 +653,18 @@ func (x *ConnectionEventData) GetReason() string {
 	return ""
 }
 
-// DatabaseOperationEventData is the payload of database.operation. It reports
-// a state change of a DatabaseService operation.
-type DatabaseOperationEventData struct {
-	state         protoimpl.MessageState   `protogen:"open.v1"`
-	OperationId   string                   `protobuf:"bytes,1,opt,name=operation_id,json=operationId,proto3" json:"operation_id,omitempty"`
-	OperationType database.OperationType   `protobuf:"varint,2,opt,name=operation_type,json=operationType,proto3,enum=bark.v1alpha1.database.OperationType" json:"operation_type,omitempty"`
-	Status        database.OperationStatus `protobuf:"varint,3,opt,name=status,proto3,enum=bark.v1alpha1.database.OperationStatus" json:"status,omitempty"`
-	// Failure message when status is failed. Empty otherwise.
-	Error         string `protobuf:"bytes,4,opt,name=error,proto3" json:"error,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *DatabaseOperationEventData) Reset() {
-	*x = DatabaseOperationEventData{}
-	mi := &file_v1alpha1_event_payload_proto_msgTypes[7]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *DatabaseOperationEventData) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DatabaseOperationEventData) ProtoMessage() {}
-
-func (x *DatabaseOperationEventData) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_event_payload_proto_msgTypes[7]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use DatabaseOperationEventData.ProtoReflect.Descriptor instead.
-func (*DatabaseOperationEventData) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_event_payload_proto_rawDescGZIP(), []int{7}
-}
-
-func (x *DatabaseOperationEventData) GetOperationId() string {
-	if x != nil {
-		return x.OperationId
-	}
-	return ""
-}
-
-func (x *DatabaseOperationEventData) GetOperationType() database.OperationType {
-	if x != nil {
-		return x.OperationType
-	}
-	return database.OperationType(0)
-}
-
-func (x *DatabaseOperationEventData) GetStatus() database.OperationStatus {
-	if x != nil {
-		return x.Status
-	}
-	return database.OperationStatus(0)
-}
-
-func (x *DatabaseOperationEventData) GetError() string {
-	if x != nil {
-		return x.Error
-	}
-	return ""
-}
-
 var File_v1alpha1_event_payload_proto protoreflect.FileDescriptor
 
 const file_v1alpha1_event_payload_proto_rawDesc = "" +
 	"\n" +
-	"\x1cv1alpha1/event/payload.proto\x12\x13bark.v1alpha1.event\x1a v1alpha1/database/database.proto\"\xae\x01\n" +
+	"\x1cv1alpha1/event/payload.proto\x12\x13bark.v1alpha1.event\"\xae\x01\n" +
 	"\x12PeerChurnEventData\x12\x18\n" +
 	"\aaddress\x18\x01 \x01(\tR\aaddress\x12\x16\n" +
 	"\x06source\x18\x02 \x01(\tR\x06source\x12\x1b\n" +
 	"\told_state\x18\x03 \x01(\tR\boldState\x12\x1b\n" +
 	"\tnew_state\x18\x04 \x01(\tR\bnewState\x12\x14\n" +
 	"\x05score\x18\x05 \x01(\x01R\x05score\x12\x16\n" +
-	"\x06reason\x18\x06 \x01(\tR\x06reason\"\xaf\x01\n" +
+	"\x06reason\x18\x06 \x01(\tR\x06reason\"\xf8\x01\n" +
 	"\x14ChainUpdateEventData\x12\x12\n" +
 	"\x04slot\x18\x01 \x01(\x04R\x04slot\x12\x1d\n" +
 	"\n" +
@@ -805,18 +672,14 @@ const file_v1alpha1_event_payload_proto_rawDesc = "" +
 	"\fblock_number\x18\x03 \x01(\x04R\vblockNumber\x12\x10\n" +
 	"\x03era\x18\x04 \x01(\tR\x03era\x12\x14\n" +
 	"\x05epoch\x18\x05 \x01(\x04R\x05epoch\x12\x19\n" +
-	"\btx_count\x18\x06 \x01(\rR\atxCount\"\x9e\x01\n" +
+	"\btx_count\x18\x06 \x01(\rR\atxCount\x12G\n" +
+	"\brollback\x18\a \x01(\v2+.bark.v1alpha1.event.ChainRollbackEventDataR\brollback\"\x9e\x01\n" +
 	"\x16ChainRollbackEventData\x12\x1b\n" +
 	"\tfrom_slot\x18\x01 \x01(\x04R\bfromSlot\x12\x17\n" +
 	"\ato_slot\x18\x02 \x01(\x04R\x06toSlot\x12,\n" +
 	"\x12blocks_rolled_back\x18\x03 \x01(\rR\x10blocksRolledBack\x12 \n" +
 	"\fnew_tip_hash\x18\x04 \x01(\fR\n" +
-	"newTipHash\"\x9e\x01\n" +
-	"\x12SyncStateEventData\x12%\n" +
-	"\x0eprevious_state\x18\x01 \x01(\tR\rpreviousState\x12#\n" +
-	"\rcurrent_state\x18\x02 \x01(\tR\fcurrentState\x12\x19\n" +
-	"\btip_slot\x18\x03 \x01(\x04R\atipSlot\x12!\n" +
-	"\fslots_behind\x18\x04 \x01(\x04R\vslotsBehind\"\x84\x01\n" +
+	"newTipHash\"\x84\x01\n" +
 	"\x18EpochTransitionEventData\x12%\n" +
 	"\x0eprevious_epoch\x18\x01 \x01(\x04R\rpreviousEpoch\x12\x1b\n" +
 	"\tnew_epoch\x18\x02 \x01(\x04R\bnewEpoch\x12\x12\n" +
@@ -832,12 +695,7 @@ const file_v1alpha1_event_payload_proto_rawDesc = "" +
 	"\aaddress\x18\x01 \x01(\tR\aaddress\x12F\n" +
 	"\tdirection\x18\x02 \x01(\x0e2(.bark.v1alpha1.event.ConnectionDirectionR\tdirection\x12=\n" +
 	"\x06action\x18\x03 \x01(\x0e2%.bark.v1alpha1.event.ConnectionActionR\x06action\x12\x16\n" +
-	"\x06reason\x18\x04 \x01(\tR\x06reason\"\xe4\x01\n" +
-	"\x1aDatabaseOperationEventData\x12!\n" +
-	"\foperation_id\x18\x01 \x01(\tR\voperationId\x12L\n" +
-	"\x0eoperation_type\x18\x02 \x01(\x0e2%.bark.v1alpha1.database.OperationTypeR\roperationType\x12?\n" +
-	"\x06status\x18\x03 \x01(\x0e2'.bark.v1alpha1.database.OperationStatusR\x06status\x12\x14\n" +
-	"\x05error\x18\x04 \x01(\tR\x05error*u\n" +
+	"\x06reason\x18\x04 \x01(\tR\x06reason*u\n" +
 	"\x11TransactionAction\x12\"\n" +
 	"\x1eTRANSACTION_ACTION_UNSPECIFIED\x10\x00\x12\x1c\n" +
 	"\x18TRANSACTION_ACTION_ADDED\x10\x01\x12\x1e\n" +
@@ -865,33 +723,28 @@ func file_v1alpha1_event_payload_proto_rawDescGZIP() []byte {
 }
 
 var file_v1alpha1_event_payload_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_v1alpha1_event_payload_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_v1alpha1_event_payload_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_v1alpha1_event_payload_proto_goTypes = []any{
-	(TransactionAction)(0),             // 0: bark.v1alpha1.event.TransactionAction
-	(ConnectionDirection)(0),           // 1: bark.v1alpha1.event.ConnectionDirection
-	(ConnectionAction)(0),              // 2: bark.v1alpha1.event.ConnectionAction
-	(*PeerChurnEventData)(nil),         // 3: bark.v1alpha1.event.PeerChurnEventData
-	(*ChainUpdateEventData)(nil),       // 4: bark.v1alpha1.event.ChainUpdateEventData
-	(*ChainRollbackEventData)(nil),     // 5: bark.v1alpha1.event.ChainRollbackEventData
-	(*SyncStateEventData)(nil),         // 6: bark.v1alpha1.event.SyncStateEventData
-	(*EpochTransitionEventData)(nil),   // 7: bark.v1alpha1.event.EpochTransitionEventData
-	(*TransactionEventData)(nil),       // 8: bark.v1alpha1.event.TransactionEventData
-	(*ConnectionEventData)(nil),        // 9: bark.v1alpha1.event.ConnectionEventData
-	(*DatabaseOperationEventData)(nil), // 10: bark.v1alpha1.event.DatabaseOperationEventData
-	(database.OperationType)(0),        // 11: bark.v1alpha1.database.OperationType
-	(database.OperationStatus)(0),      // 12: bark.v1alpha1.database.OperationStatus
+	(TransactionAction)(0),           // 0: bark.v1alpha1.event.TransactionAction
+	(ConnectionDirection)(0),         // 1: bark.v1alpha1.event.ConnectionDirection
+	(ConnectionAction)(0),            // 2: bark.v1alpha1.event.ConnectionAction
+	(*PeerChurnEventData)(nil),       // 3: bark.v1alpha1.event.PeerChurnEventData
+	(*ChainUpdateEventData)(nil),     // 4: bark.v1alpha1.event.ChainUpdateEventData
+	(*ChainRollbackEventData)(nil),   // 5: bark.v1alpha1.event.ChainRollbackEventData
+	(*EpochTransitionEventData)(nil), // 6: bark.v1alpha1.event.EpochTransitionEventData
+	(*TransactionEventData)(nil),     // 7: bark.v1alpha1.event.TransactionEventData
+	(*ConnectionEventData)(nil),      // 8: bark.v1alpha1.event.ConnectionEventData
 }
 var file_v1alpha1_event_payload_proto_depIdxs = []int32{
-	0,  // 0: bark.v1alpha1.event.TransactionEventData.action:type_name -> bark.v1alpha1.event.TransactionAction
-	1,  // 1: bark.v1alpha1.event.ConnectionEventData.direction:type_name -> bark.v1alpha1.event.ConnectionDirection
-	2,  // 2: bark.v1alpha1.event.ConnectionEventData.action:type_name -> bark.v1alpha1.event.ConnectionAction
-	11, // 3: bark.v1alpha1.event.DatabaseOperationEventData.operation_type:type_name -> bark.v1alpha1.database.OperationType
-	12, // 4: bark.v1alpha1.event.DatabaseOperationEventData.status:type_name -> bark.v1alpha1.database.OperationStatus
-	5,  // [5:5] is the sub-list for method output_type
-	5,  // [5:5] is the sub-list for method input_type
-	5,  // [5:5] is the sub-list for extension type_name
-	5,  // [5:5] is the sub-list for extension extendee
-	0,  // [0:5] is the sub-list for field type_name
+	5, // 0: bark.v1alpha1.event.ChainUpdateEventData.rollback:type_name -> bark.v1alpha1.event.ChainRollbackEventData
+	0, // 1: bark.v1alpha1.event.TransactionEventData.action:type_name -> bark.v1alpha1.event.TransactionAction
+	1, // 2: bark.v1alpha1.event.ConnectionEventData.direction:type_name -> bark.v1alpha1.event.ConnectionDirection
+	2, // 3: bark.v1alpha1.event.ConnectionEventData.action:type_name -> bark.v1alpha1.event.ConnectionAction
+	4, // [4:4] is the sub-list for method output_type
+	4, // [4:4] is the sub-list for method input_type
+	4, // [4:4] is the sub-list for extension type_name
+	4, // [4:4] is the sub-list for extension extendee
+	0, // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_v1alpha1_event_payload_proto_init() }
@@ -905,7 +758,7 @@ func file_v1alpha1_event_payload_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1alpha1_event_payload_proto_rawDesc), len(file_v1alpha1_event_payload_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   8,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

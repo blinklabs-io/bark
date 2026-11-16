@@ -2,8 +2,6 @@ syntax = "proto3";
 
 package bark.v1alpha1.event;
 
-import "v1alpha1/database/database.proto";
-
 option go_package = "github.com/blinklabs-io/bark/proto/v1alpha1/event;eventv1alpha1";
 
 // The messages in this file are the typed payloads packed into
@@ -25,8 +23,9 @@ message PeerChurnEventData {
   string reason = 6;
 }
 
-// ChainUpdateEventData is the payload of chain.update: a block added to the
-// chain.
+// ChainUpdateEventData is the payload of chain.update. It reports either a
+// block added to the chain or a rollback: when rollback is set the block
+// fields are unset.
 message ChainUpdateEventData {
   uint64 slot = 1;
   bytes block_hash = 2;
@@ -37,9 +36,11 @@ message ChainUpdateEventData {
   uint64 epoch = 5;
   // Number of transactions in the block.
   uint32 tx_count = 6;
+  // Set when the event reports a rollback instead of a block.
+  ChainRollbackEventData rollback = 7;
 }
 
-// ChainRollbackEventData is the payload of chain.rollback.
+// ChainRollbackEventData describes a rollback reported by chain.update.
 message ChainRollbackEventData {
   // Slot of the tip before the rollback.
   uint64 from_slot = 1;
@@ -50,17 +51,7 @@ message ChainRollbackEventData {
   bytes new_tip_hash = 4;
 }
 
-// SyncStateEventData is the payload of ledger.sync_state_changed.
-message SyncStateEventData {
-  // Sync state before and after the change, such as "syncing" or "synced".
-  string previous_state = 1;
-  string current_state = 2;
-  uint64 tip_slot = 3;
-  // Estimated slots behind the network tip. Zero when synced.
-  uint64 slots_behind = 4;
-}
-
-// EpochTransitionEventData is the payload of ledger.epoch_transitioned.
+// EpochTransitionEventData is the payload of epoch.transition.
 message EpochTransitionEventData {
   uint64 previous_epoch = 1;
   uint64 new_epoch = 2;
@@ -116,14 +107,4 @@ enum ConnectionAction {
   CONNECTION_ACTION_UNSPECIFIED = 0;
   CONNECTION_ACTION_ACCEPTED = 1;
   CONNECTION_ACTION_CLOSED = 2;
-}
-
-// DatabaseOperationEventData is the payload of database.operation. It reports
-// a state change of a DatabaseService operation.
-message DatabaseOperationEventData {
-  string operation_id = 1;
-  bark.v1alpha1.database.OperationType operation_type = 2;
-  bark.v1alpha1.database.OperationStatus status = 3;
-  // Failure message when status is failed. Empty otherwise.
-  string error = 4;
 }

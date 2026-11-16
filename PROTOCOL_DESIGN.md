@@ -210,7 +210,7 @@ Key messages:
 - `PublishBatch` reports a failure for one event in that event's result, in request order, and still delivers the others. The call fails only for a reason that covers every event, such as the service being disabled.
 - `GetEventSchema` returns the description of one event type, plus the name and descriptors of its typed payload when it has one. An unregistered type fails with `NOT_FOUND`.
 - `ListEventTypes` entries carry the type's name, category, description and whether it has a typed payload.
-- Typed payloads are defined in `payload.proto`. Every registered type has one except `peergov.bootstrap_exited`, `peergov.bootstrap_recovery`, `peergov.quota_status`, `peergov.outbound_conn`, `chain.fork_detected`, `ledger.protocol_params_updated`, `ledger.error`, `ledger.blockfetch` and `ledger.chainsync`; those leave `typed_data` unset.
+- Typed payloads are defined in `payload.proto`. `peergov.peer_churn`, `chain.update`, `epoch.transition`, `mempool.add_tx`, `mempool.remove_tx`, `connmanager.inbound_conn` and `connmanager.conn_closed` have one; every other registered type leaves `typed_data` unset. A `chain.update` payload reports a rollback through its `rollback` field.
 
 ### Client and Registry
 

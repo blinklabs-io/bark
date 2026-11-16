@@ -32,23 +32,19 @@ func TestRegisteredNamesAreUniqueAndCategorised(t *testing.T) {
 	}
 }
 
-// TestIsRegistered checks the types a subscriber filters on, including the
-// ones with their own name rather than a shared chain.update.
+// TestIsRegistered checks a known name and the rollback case: Dingo carries a
+// rollback inside chain.update, so a separate chain.rollback must not be
+// advertised.
 func TestIsRegistered(t *testing.T) {
-	for _, name := range []string{
-		eventtype.ChainUpdate,
-		eventtype.ChainRollback,
-		eventtype.LedgerSyncStateChanged,
-		eventtype.LedgerEpochTransitioned,
-		eventtype.LedgerProtocolParamsUpdate,
-		eventtype.DatabaseOperation,
-	} {
+	for _, name := range []string{eventtype.ChainUpdate, eventtype.EpochTransition} {
 		if !eventtype.IsRegistered(name) {
 			t.Errorf("%s should be registered", name)
 		}
 	}
-	if eventtype.IsRegistered("epoch.transition") {
-		t.Error("epoch.transition is an internal name, not registered")
+	for _, name := range []string{"chain.rollback", "ledger.sync_state_changed", "database.operation"} {
+		if eventtype.IsRegistered(name) {
+			t.Errorf("%s is not emitted by Dingo and must not be registered", name)
+		}
 	}
 }
 
@@ -88,7 +84,7 @@ func TestInfosMatchRegistered(t *testing.T) {
 			t.Errorf("Lookup(%q) = %v, %v", info.Name, got, ok)
 		}
 	}
-	if _, ok := eventtype.Lookup("chain.nothing"); ok {
+	if _, ok := eventtype.Lookup("chain.rollback"); ok {
 		t.Error("Lookup found an unregistered type")
 	}
 }
