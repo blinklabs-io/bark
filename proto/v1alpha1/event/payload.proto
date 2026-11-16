@@ -1,0 +1,129 @@
+syntax = "proto3";
+
+package bark.v1alpha1.event;
+
+import "v1alpha1/database/database.proto";
+
+option go_package = "github.com/blinklabs-io/bark/proto/v1alpha1/event;eventv1alpha1";
+
+// The messages in this file are the typed payloads packed into
+// Event.typed_data. Each mirrors the data its Dingo event carries.
+
+// PeerChurnEventData is the payload of peergov.peer_churn.
+message PeerChurnEventData {
+  // Peer address as host:port.
+  string address = 1;
+  // How the peer was learned, such as "gossip" or "ledger".
+  string source = 2;
+  // Peer state before the change: "cold", "warm" or "hot".
+  string old_state = 3;
+  // Peer state after the change.
+  string new_state = 4;
+  // Performance score when the change was made.
+  double score = 5;
+  // Why the state changed.
+  string reason = 6;
+}
+
+// ChainUpdateEventData is the payload of chain.update: a block added to the
+// chain.
+message ChainUpdateEventData {
+  uint64 slot = 1;
+  bytes block_hash = 2;
+  uint64 block_number = 3;
+  // Era of the block, such as "conway".
+  string era = 4;
+  // Epoch the block's slot falls in.
+  uint64 epoch = 5;
+  // Number of transactions in the block.
+  uint32 tx_count = 6;
+}
+
+// ChainRollbackEventData is the payload of chain.rollback.
+message ChainRollbackEventData {
+  // Slot of the tip before the rollback.
+  uint64 from_slot = 1;
+  // Slot of the point rolled back to.
+  uint64 to_slot = 2;
+  uint32 blocks_rolled_back = 3;
+  // Hash of the tip after the rollback.
+  bytes new_tip_hash = 4;
+}
+
+// SyncStateEventData is the payload of ledger.sync_state_changed.
+message SyncStateEventData {
+  // Sync state before and after the change, such as "syncing" or "synced".
+  string previous_state = 1;
+  string current_state = 2;
+  uint64 tip_slot = 3;
+  // Estimated slots behind the network tip. Zero when synced.
+  uint64 slots_behind = 4;
+}
+
+// EpochTransitionEventData is the payload of ledger.epoch_transitioned.
+message EpochTransitionEventData {
+  uint64 previous_epoch = 1;
+  uint64 new_epoch = 2;
+  // First slot of the new epoch.
+  uint64 slot = 3;
+  // Era active at the boundary, such as "conway".
+  string era = 4;
+}
+
+// TransactionEventData is the payload of mempool.add_tx and
+// mempool.remove_tx.
+message TransactionEventData {
+  // Transaction hash as hex.
+  string tx_hash = 1;
+  // Size of the transaction in bytes. Zero when the event does not carry the
+  // transaction body, as on removal.
+  uint64 size_bytes = 2;
+  // Fee in lovelace. Zero when the event does not carry the transaction
+  // body, as on removal.
+  uint64 fee = 3;
+  // What happened to the transaction in the mempool.
+  TransactionAction action = 4;
+}
+
+// TransactionAction is what happened to a mempool transaction.
+enum TransactionAction {
+  TRANSACTION_ACTION_UNSPECIFIED = 0;
+  TRANSACTION_ACTION_ADDED = 1;
+  TRANSACTION_ACTION_REMOVED = 2;
+}
+
+// ConnectionEventData is the payload of connmanager.inbound_conn and
+// connmanager.conn_closed.
+message ConnectionEventData {
+  // Remote address as host:port.
+  string address = 1;
+  ConnectionDirection direction = 2;
+  ConnectionAction action = 3;
+  // Why the connection closed. Empty for an accepted connection or a close
+  // with no recorded reason.
+  string reason = 4;
+}
+
+// ConnectionDirection is which side opened a connection.
+enum ConnectionDirection {
+  CONNECTION_DIRECTION_UNSPECIFIED = 0;
+  CONNECTION_DIRECTION_INBOUND = 1;
+  CONNECTION_DIRECTION_OUTBOUND = 2;
+}
+
+// ConnectionAction is what happened to a connection.
+enum ConnectionAction {
+  CONNECTION_ACTION_UNSPECIFIED = 0;
+  CONNECTION_ACTION_ACCEPTED = 1;
+  CONNECTION_ACTION_CLOSED = 2;
+}
+
+// DatabaseOperationEventData is the payload of database.operation. It reports
+// a state change of a DatabaseService operation.
+message DatabaseOperationEventData {
+  string operation_id = 1;
+  bark.v1alpha1.database.OperationType operation_type = 2;
+  bark.v1alpha1.database.OperationStatus status = 3;
+  // Failure message when status is failed. Empty otherwise.
+  string error = 4;
+}

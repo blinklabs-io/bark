@@ -136,7 +136,7 @@ Service that exposes a node's EventBus over the network. `Subscribe` is at-most-
 
 **RPC Methods**: `Subscribe`, `SubscribeWithAck`, `Publish`, `PublishBatch`, `ListEventTypes`, `GetEventSchema`
 
-The `eventtype` package lists the event types a node exposes, and the `eventclient` package wraps the Event Service streams: `SubscribeWithAck` reconnects and resumes from the last acknowledged sequence on its own.
+The `eventtype` package lists the event types a node exposes, and the `eventclient` package wraps the Event Service streams: `SubscribeWithAck` reconnects and resumes from the last acknowledged sequence on its own. `eventtype.PayloadDescriptors` returns the definitions of an event type's typed payload.
 
 See [PROTOCOL_DESIGN.md](PROTOCOL_DESIGN.md) for detailed protocol documentation.
 
