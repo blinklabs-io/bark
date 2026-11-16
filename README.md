@@ -134,7 +134,7 @@ Service for remote process-lifecycle control: graceful stop, graceful restart (s
 
 Service that exposes a node's EventBus over the network. `Subscribe` is at-most-once; `SubscribeWithAck` is at-least-once and resumes from the last acknowledged sequence after a disconnect. `Publish` writes into the node's EventBus, so a server may leave it disabled.
 
-**RPC Methods**: `Subscribe`, `SubscribeWithAck`, `Publish`, `ListEventTypes`
+**RPC Methods**: `Subscribe`, `SubscribeWithAck`, `Publish`, `PublishBatch`, `ListEventTypes`, `GetEventSchema`
 
 The `eventtype` package lists the event types a node exposes, and the `eventclient` package wraps the Event Service streams: `SubscribeWithAck` reconnects and resumes from the last acknowledged sequence on its own.
 

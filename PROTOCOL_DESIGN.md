@@ -191,7 +191,9 @@ Service: EventService
 - Subscribe(SubscribeRequest) returns (stream SubscribeResponse)
 - SubscribeWithAck(stream SubscribeWithAckRequest) returns (stream SubscribeWithAckResponse)
 - Publish(PublishRequest) returns (PublishResponse)
+- PublishBatch(PublishBatchRequest) returns (PublishBatchResponse)
 - ListEventTypes(ListEventTypesRequest) returns (ListEventTypesResponse)
+- GetEventSchema(GetEventSchemaRequest) returns (GetEventSchemaResponse)
 
 Key messages:
 - Event: envelope with a stable `id`, `event_type`, `timestamp`, `origin_node_id`, a server-assigned `sequence`, and an optional `typed_data` payload
@@ -205,6 +207,9 @@ Key messages:
 - `SubscribeWithAck` is at-least-once. The server redelivers unacknowledged events, and a client that reconnects with its last acknowledged `sequence` receives everything after it. Clients de-duplicate on `Event.id`.
 - If the requested resume position is no longer buffered, the server closes the stream with `OUT_OF_RANGE`.
 - A node must not forward an event back to the node named in `origin_node_id`.
+- `PublishBatch` reports a failure for one event in that event's result, in request order, and still delivers the others. The call fails only for a reason that covers every event, such as the service being disabled.
+- `GetEventSchema` returns the description of one event type, plus the name and descriptors of its typed payload when it has one. An unregistered type fails with `NOT_FOUND`.
+- `ListEventTypes` entries carry the type's name, category, description and whether it has a typed payload.
 
 ### Client and Registry
 
@@ -215,8 +220,8 @@ Key messages:
 
 The protocol carries no credentials, so a server decides who can reach the service. Offer it only on a trusted network or behind your own authentication; a server may reject a call with `UNAUTHENTICATED` or `PERMISSION_DENIED`.
 
-- Read-only: `Subscribe`, `SubscribeWithAck`, `ListEventTypes`
-- Mutating: `Publish` writes into the receiving node's EventBus. A server should leave it disabled unless an operator enables it, and a server that offers it must accept only registered event types.
+- Read-only: `Subscribe`, `SubscribeWithAck`, `ListEventTypes`, `GetEventSchema`
+- Mutating: `Publish` and `PublishBatch` write into the receiving node's EventBus. A server should leave it disabled unless an operator enables it, and a server that offers it must accept only registered event types.
 
 ## Versioning
 

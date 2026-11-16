@@ -70,6 +70,57 @@ func (c *Client) Publish(
 	return err
 }
 
+// PublishBatch delivers events to the server's EventBus and returns one
+// result per event, in order. An event the server rejects is reported in its
+// result and does not fail the call; the returned error covers only failures
+// that apply to the whole batch.
+func (c *Client) PublishBatch(
+	ctx context.Context,
+	events []*eventv1alpha1.Event,
+) ([]*eventv1alpha1.PublishBatchResult, error) {
+	resp, err := c.svc.PublishBatch(
+		ctx,
+		connect.NewRequest(&eventv1alpha1.PublishBatchRequest{Events: events}),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return resp.Msg.GetResults(), nil
+}
+
+// ListEventTypeInfos returns the event types the server accepts with their
+// category, description and payload flag.
+func (c *Client) ListEventTypeInfos(
+	ctx context.Context,
+) ([]*eventv1alpha1.EventTypeInfo, error) {
+	resp, err := c.svc.ListEventTypes(
+		ctx,
+		connect.NewRequest(&eventv1alpha1.ListEventTypesRequest{}),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return resp.Msg.GetEventTypes(), nil
+}
+
+// GetEventSchema returns the schema of one event type. The error has code
+// NotFound when the server does not register the type.
+func (c *Client) GetEventSchema(
+	ctx context.Context,
+	eventType string,
+) (*eventv1alpha1.GetEventSchemaResponse, error) {
+	resp, err := c.svc.GetEventSchema(
+		ctx,
+		connect.NewRequest(&eventv1alpha1.GetEventSchemaRequest{
+			EventType: eventType,
+		}),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return resp.Msg, nil
+}
+
 // Subscribe calls handler for every event of the given types until ctx is
 // done, the server ends the stream, or the stream fails. An empty eventTypes
 // selects every registered type. Delivery is at-most-once: events published
