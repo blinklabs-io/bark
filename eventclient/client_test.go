@@ -482,3 +482,52 @@ func TestSubscribeWithAckRequiresSubscriberID(t *testing.T) {
 		t.Fatal("expected an error")
 	}
 }
+
+// TestSubscribeWithAckReturnsWhenCanceledWhileIdle checks that canceling the
+// context ends a subscription that is waiting for its next event.
+func TestSubscribeWithAckReturnsWhenCanceledWhileIdle(t *testing.T) {
+	srv := &fakeServer{}
+	srv.ackSession = func(
+		_ int,
+		_ *eventv1alpha1.SubscribeWithAckStart,
+		stream *connect.BidiStream[
+			eventv1alpha1.SubscribeWithAckRequest,
+			eventv1alpha1.SubscribeWithAckResponse,
+		],
+	) error {
+		if err := stream.Send(seqEvent(1)); err != nil {
+			return err
+		}
+		for {
+			if _, err := stream.Receive(); err != nil {
+				return nil
+			}
+		}
+	}
+	c := newClient(t, srv)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	handled := make(chan struct{}, 1)
+	done := make(chan error, 1)
+	go func() {
+		done <- c.SubscribeWithAck(
+			ctx,
+			eventclient.AckConfig{SubscriberID: "idle"},
+			func(context.Context, *eventv1alpha1.Event) error {
+				handled <- struct{}{}
+				return nil
+			},
+		)
+	}()
+	<-handled
+	time.Sleep(100 * time.Millisecond)
+	cancel()
+	select {
+	case err := <-done:
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("got %v, want context.Canceled", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("SubscribeWithAck did not return after cancel")
+	}
+}
