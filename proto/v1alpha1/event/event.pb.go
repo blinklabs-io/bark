@@ -79,12 +79,19 @@ func (PublishFailureCode) EnumDescriptor() ([]byte, []int) {
 	return file_v1alpha1_event_event_proto_rawDescGZIP(), []int{0}
 }
 
-// EventFilter selects which event types a subscriber receives.
+// EventFilter selects which events a subscriber receives. An event must
+// satisfy every field that is set.
 type EventFilter struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Event types to receive, such as "chain.update". Empty selects every
-	// registered type.
-	EventTypes    []string `protobuf:"bytes,1,rep,name=event_types,json=eventTypes,proto3" json:"event_types,omitempty"`
+	// Event types to receive. Each entry is a registered name such as
+	// "chain.update", or a category pattern such as "peergov.*" that selects
+	// every registered type in that category. A name that is not registered, or
+	// a pattern naming no registered category, is rejected with
+	// INVALID_ARGUMENT. Empty selects every registered type.
+	EventTypes []string `protobuf:"bytes,1,rep,name=event_types,json=eventTypes,proto3" json:"event_types,omitempty"`
+	// Node identifiers to receive events from, matched against
+	// Event.origin_node_id. Empty selects events from any node.
+	OriginNodeIds []string `protobuf:"bytes,2,rep,name=origin_node_ids,json=originNodeIds,proto3" json:"origin_node_ids,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -122,6 +129,13 @@ func (*EventFilter) Descriptor() ([]byte, []int) {
 func (x *EventFilter) GetEventTypes() []string {
 	if x != nil {
 		return x.EventTypes
+	}
+	return nil
+}
+
+func (x *EventFilter) GetOriginNodeIds() []string {
+	if x != nil {
+		return x.OriginNodeIds
 	}
 	return nil
 }
@@ -1101,10 +1115,11 @@ var File_v1alpha1_event_event_proto protoreflect.FileDescriptor
 
 const file_v1alpha1_event_event_proto_rawDesc = "" +
 	"\n" +
-	"\x1av1alpha1/event/event.proto\x12\x13bark.v1alpha1.event\x1a\x19google/protobuf/any.proto\x1a google/protobuf/descriptor.proto\x1a\x1fgoogle/protobuf/timestamp.proto\".\n" +
+	"\x1av1alpha1/event/event.proto\x12\x13bark.v1alpha1.event\x1a\x19google/protobuf/any.proto\x1a google/protobuf/descriptor.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"V\n" +
 	"\vEventFilter\x12\x1f\n" +
 	"\vevent_types\x18\x01 \x03(\tR\n" +
-	"eventTypes\"\xe7\x01\n" +
+	"eventTypes\x12&\n" +
+	"\x0forigin_node_ids\x18\x02 \x03(\tR\roriginNodeIds\"\xe7\x01\n" +
 	"\x05Event\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +

@@ -6,6 +6,7 @@ package eventtype
 import (
 	"fmt"
 	"slices"
+	"strings"
 
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protodesc"
@@ -176,4 +177,52 @@ func PayloadDescriptors(
 	}
 	add(msg.Descriptor().ParentFile())
 	return set, nil
+}
+
+// PatternSuffix ends a category pattern such as "peergov.*".
+const PatternSuffix = ".*"
+
+// Matcher returns a function reporting whether an event type name satisfies
+// any of patterns. Each pattern is a registered name or a category pattern
+// such as "peergov.*"; it returns an error naming the first pattern that is
+// neither. An empty patterns list matches every name.
+func Matcher(patterns []string) (func(name string) bool, error) {
+	if len(patterns) == 0 {
+		return func(string) bool { return true }, nil
+	}
+	exact := make(map[string]struct{}, len(patterns))
+	var categories []string
+	for _, p := range patterns {
+		if category, ok := strings.CutSuffix(p, PatternSuffix); ok {
+			if !hasCategory(category) {
+				return nil, fmt.Errorf("pattern %q names no registered category", p)
+			}
+			categories = append(categories, category+".")
+			continue
+		}
+		if !IsRegistered(p) {
+			return nil, fmt.Errorf("event type %q is not registered", p)
+		}
+		exact[p] = struct{}{}
+	}
+	return func(name string) bool {
+		if _, ok := exact[name]; ok {
+			return true
+		}
+		for _, prefix := range categories {
+			if strings.HasPrefix(name, prefix) {
+				return true
+			}
+		}
+		return false
+	}, nil
+}
+
+func hasCategory(category string) bool {
+	for _, e := range registered {
+		if e.Category == category {
+			return true
+		}
+	}
+	return false
 }
