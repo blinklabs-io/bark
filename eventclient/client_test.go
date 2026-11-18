@@ -393,6 +393,42 @@ func TestSubscribeWithAckSkipsRedeliveredEvents(t *testing.T) {
 	}
 }
 
+// TestSubscribeWithAckSendsOriginFilter checks that OriginNodeIDs reaches the
+// server in the start message.
+func TestSubscribeWithAckSendsOriginFilter(t *testing.T) {
+	srv := &fakeServer{}
+	srv.ackSession = func(
+		_ int,
+		_ *eventv1alpha1.SubscribeWithAckStart,
+		_ *connect.BidiStream[
+			eventv1alpha1.SubscribeWithAckRequest,
+			eventv1alpha1.SubscribeWithAckResponse,
+		],
+	) error {
+		return connect.NewError(connect.CodeOutOfRange, errors.New("done"))
+	}
+	c := newClient(t, srv)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	_ = c.SubscribeWithAck(
+		ctx,
+		eventclient.AckConfig{
+			SubscriberID:  "o",
+			EventTypes:    []string{"peergov.*"},
+			OriginNodeIDs: []string{"node-b"},
+		},
+		func(context.Context, *eventv1alpha1.Event) error { return nil },
+	)
+	srv.mu.Lock()
+	defer srv.mu.Unlock()
+	f := srv.starts[0].GetFilter()
+	if !slices.Equal(f.GetOriginNodeIds(), []string{"node-b"}) ||
+		!slices.Equal(f.GetEventTypes(), []string{"peergov.*"}) {
+		t.Fatalf("filter not forwarded: %v", f)
+	}
+}
+
 // TestSubscribeWithAckDoesNotRetryOutOfRange checks that a resume position the
 // server no longer holds ends the subscription. Retrying would ask for the same
 // position forever, and the caller has to start over.

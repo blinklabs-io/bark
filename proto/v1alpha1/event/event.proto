@@ -59,11 +59,19 @@ service EventService {
   rpc GetEventSchema(GetEventSchemaRequest) returns (GetEventSchemaResponse);
 }
 
-// EventFilter selects which event types a subscriber receives.
+// EventFilter selects which events a subscriber receives. An event must
+// satisfy every field that is set.
 message EventFilter {
-  // Event types to receive, such as "chain.update". Empty selects every
-  // registered type.
+  // Event types to receive. Each entry is a registered name such as
+  // "chain.update", or a category pattern such as "peergov.*" that selects
+  // every registered type in that category. A name that is not registered, or
+  // a pattern naming no registered category, is rejected with
+  // INVALID_ARGUMENT. Empty selects every registered type.
   repeated string event_types = 1;
+
+  // Node identifiers to receive events from, matched against
+  // Event.origin_node_id. Empty selects events from any node.
+  repeated string origin_node_ids = 2;
 }
 
 // Event is the envelope for one event.

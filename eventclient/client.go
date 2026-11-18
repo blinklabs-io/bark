@@ -152,9 +152,13 @@ type AckConfig struct {
 	// SubscriberID identifies the subscription across reconnects. It is
 	// required.
 	SubscriberID string
-	// EventTypes selects the event types to receive. Empty selects every
-	// registered type.
+	// EventTypes selects the event types to receive, as registered names or
+	// category patterns such as "peergov.*". Empty selects every registered
+	// type.
 	EventTypes []string
+	// OriginNodeIDs selects events by the node that created them. Empty
+	// selects events from any node.
+	OriginNodeIDs []string
 	// LastAckedSequence is the sequence of the last event a previous run
 	// processed, or zero to start from the stream's current position.
 	LastAckedSequence uint64
@@ -236,7 +240,8 @@ func (c *Client) ackSession(
 		Message: &eventv1alpha1.SubscribeWithAckRequest_Start{
 			Start: &eventv1alpha1.SubscribeWithAckStart{
 				Filter: &eventv1alpha1.EventFilter{
-					EventTypes: cfg.EventTypes,
+					EventTypes:    cfg.EventTypes,
+					OriginNodeIds: cfg.OriginNodeIDs,
 				},
 				SubscriberId:      cfg.SubscriberID,
 				LastAckedSequence: *last,

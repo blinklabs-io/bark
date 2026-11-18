@@ -155,3 +155,31 @@ func TestPayloadDescriptorsRejectsUnregistered(t *testing.T) {
 		t.Error("type without payload should fail")
 	}
 }
+
+// TestMatcher checks exact names, category patterns and the rejections.
+func TestMatcher(t *testing.T) {
+	m, err := eventtype.Matcher([]string{"peergov.*", eventtype.ChainUpdate})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, want := range map[string]bool{
+		eventtype.PeerChurn:         true,
+		eventtype.QuotaStatus:       true,
+		eventtype.ChainUpdate:       true,
+		eventtype.ChainForkDetected: false,
+		eventtype.MempoolAddTx:      false,
+	} {
+		if got := m(name); got != want {
+			t.Errorf("match %s = %v, want %v", name, got, want)
+		}
+	}
+	all, err := eventtype.Matcher(nil)
+	if err != nil || !all(eventtype.MempoolAddTx) {
+		t.Errorf("empty patterns should match everything, err=%v", err)
+	}
+	for _, bad := range []string{"nope.*", "chain.rollback", "chain.", ".*"} {
+		if _, err := eventtype.Matcher([]string{bad}); err == nil {
+			t.Errorf("%q should be rejected", bad)
+		}
+	}
+}
