@@ -236,6 +236,13 @@ func (c *Client) ackSession(
 		_ = stream.CloseRequest()
 		_ = stream.CloseResponse()
 	}()
+	// The transport does not observe ctx while the stream waits for the
+	// next event, so ending the request side is what lets the server end
+	// the stream and Receive return.
+	stopWatch := context.AfterFunc(ctx, func() {
+		_ = stream.CloseRequest()
+	})
+	defer stopWatch()
 	err = stream.Send(&eventv1alpha1.SubscribeWithAckRequest{
 		Message: &eventv1alpha1.SubscribeWithAckRequest_Start{
 			Start: &eventv1alpha1.SubscribeWithAckStart{
