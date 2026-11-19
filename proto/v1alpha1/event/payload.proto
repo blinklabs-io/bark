@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package bark.v1alpha1.event;
 
+import "v1alpha1/database/database.proto";
+
 option go_package = "github.com/blinklabs-io/bark/proto/v1alpha1/event;eventv1alpha1";
 
 // The messages in this file are the typed payloads packed into
@@ -107,4 +109,50 @@ enum ConnectionAction {
   CONNECTION_ACTION_UNSPECIFIED = 0;
   CONNECTION_ACTION_ACCEPTED = 1;
   CONNECTION_ACTION_CLOSED = 2;
+}
+
+// SyncStateEventData is the payload of ledger.sync_state. It is emitted when
+// the node changes between following the chain tip and catching up to it.
+message SyncStateEventData {
+  SyncState previous_state = 1;
+  SyncState current_state = 2;
+  // Slot of the local chain tip when the state changed.
+  uint64 tip_slot = 3;
+  // How many slots the local tip is behind the wall-clock slot.
+  uint64 slots_behind = 4;
+}
+
+// SyncState is whether the node has caught up to the chain tip.
+enum SyncState {
+  SYNC_STATE_UNSPECIFIED = 0;
+  // The node is still catching up to the chain tip.
+  SYNC_STATE_SYNCING = 1;
+  // The node follows the chain tip.
+  SYNC_STATE_CAUGHT_UP = 2;
+}
+
+// ProtocolParametersEventData is the payload of ledger.protocol_params. It is
+// emitted when the protocol parameters in force change.
+message ProtocolParametersEventData {
+  // Epoch in which the parameters take effect.
+  uint64 epoch = 1;
+  // Era the parameters belong to, such as "conway".
+  string era = 2;
+  uint64 protocol_major = 3;
+  uint64 protocol_minor = 4;
+  // The full parameter set as JSON. The fields differ between eras, so they
+  // are not a typed message.
+  string parameters_json = 5;
+}
+
+// DatabaseOperationEventData is the payload of database.operation. It is
+// emitted each time a snapshot, restore, truncate or verify operation changes
+// status. operation_id, type and status are those of the DatabaseService
+// operation of the same id.
+message DatabaseOperationEventData {
+  string operation_id = 1;
+  bark.v1alpha1.database.OperationType type = 2;
+  bark.v1alpha1.database.OperationStatus status = 3;
+  // Why the operation failed. Empty unless status is FAILED.
+  string error = 4;
 }

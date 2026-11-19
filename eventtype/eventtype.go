@@ -43,6 +43,17 @@ const (
 	LedgerError      = "ledger.error"
 	LedgerBlockfetch = "ledger.blockfetch"
 	LedgerChainsync  = "ledger.chainsync"
+	// LedgerSyncState is emitted when the node moves between syncing and
+	// following the chain tip.
+	LedgerSyncState = "ledger.sync_state"
+	// LedgerProtocolParams is emitted when the protocol parameters in force
+	// change.
+	LedgerProtocolParams = "ledger.protocol_params"
+)
+
+// Database events.
+const (
+	DatabaseOperation = "database.operation"
 )
 
 // Mempool events.
@@ -103,6 +114,9 @@ var registered = []Info{
 	info(LedgerError, "ledger", "The ledger reported an error."),
 	info(LedgerBlockfetch, "ledger", "A blockfetch protocol event reached the ledger."),
 	info(LedgerChainsync, "ledger", "A chainsync protocol event reached the ledger."),
+	typed(LedgerSyncState, "ledger", "The node moved between syncing and following the chain tip.", &eventv1alpha1.SyncStateEventData{}),
+	typed(LedgerProtocolParams, "ledger", "The protocol parameters in force changed.", &eventv1alpha1.ProtocolParametersEventData{}),
+	typed(DatabaseOperation, "database", "A database snapshot, restore, truncate or verify operation changed status.", &eventv1alpha1.DatabaseOperationEventData{}),
 	typed(MempoolAddTx, "mempool", "A transaction was added to the mempool.", &eventv1alpha1.TransactionEventData{}),
 	typed(MempoolRemoveTx, "mempool", "A transaction was removed from the mempool.", &eventv1alpha1.TransactionEventData{}),
 	typed(ConnManagerInboundConn, "connmanager", "An inbound connection was accepted.", &eventv1alpha1.ConnectionEventData{}),
