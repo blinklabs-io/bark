@@ -36,12 +36,16 @@ func TestRegisteredNamesAreUniqueAndCategorised(t *testing.T) {
 // rollback inside chain.update, so a separate chain.rollback must not be
 // advertised.
 func TestIsRegistered(t *testing.T) {
-	for _, name := range []string{eventtype.ChainUpdate, eventtype.EpochTransition} {
+	for _, name := range []string{
+		eventtype.ChainUpdate, eventtype.EpochTransition,
+		eventtype.LedgerSyncState, eventtype.LedgerProtocolParams,
+		eventtype.DatabaseOperation,
+	} {
 		if !eventtype.IsRegistered(name) {
 			t.Errorf("%s should be registered", name)
 		}
 	}
-	for _, name := range []string{"chain.rollback", "ledger.sync_state_changed", "database.operation"} {
+	for _, name := range []string{"chain.rollback", "ledger.sync_state_changed"} {
 		if eventtype.IsRegistered(name) {
 			t.Errorf("%s is not emitted by Dingo and must not be registered", name)
 		}
