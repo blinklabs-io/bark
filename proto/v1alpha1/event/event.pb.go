@@ -160,7 +160,11 @@ type Event struct {
 	// events sent to Publish.
 	Sequence uint64 `protobuf:"varint,5,opt,name=sequence,proto3" json:"sequence,omitempty"`
 	// Typed payload for the event type, when the registry defines one.
-	TypedData     *anypb.Any `protobuf:"bytes,6,opt,name=typed_data,json=typedData,proto3" json:"typed_data,omitempty"`
+	TypedData *anypb.Any `protobuf:"bytes,6,opt,name=typed_data,json=typedData,proto3" json:"typed_data,omitempty"`
+	// Identifies the serving process that assigned sequence. A client resumes
+	// with both run_id and sequence because sequence restarts in a new run.
+	// Empty on events sent to Publish.
+	RunId         string `protobuf:"bytes,7,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -235,6 +239,13 @@ func (x *Event) GetTypedData() *anypb.Any {
 		return x.TypedData
 	}
 	return nil
+}
+
+func (x *Event) GetRunId() string {
+	if x != nil {
+		return x.RunId
+	}
+	return ""
 }
 
 type SubscribeRequest struct {
@@ -335,12 +346,21 @@ type SubscribeWithAckStart struct {
 	// stream closes.
 	SubscriberId string `protobuf:"bytes,2,opt,name=subscriber_id,json=subscriberId,proto3" json:"subscriber_id,omitempty"`
 	// Sequence of the last event the client processed. The server resumes
-	// with the next event. Zero starts from the current position of the
-	// stream. If the requested position is no longer buffered, the server
-	// closes the stream with OUT_OF_RANGE, and the client must start over.
+	// with the next event. With no last_acked_run_id, zero starts from the
+	// current position while a non-zero value retains legacy sequence-only
+	// resume behavior. With a run id, zero is a valid resume cursor. If the
+	// requested position is no longer buffered, the server closes the stream
+	// with OUT_OF_RANGE, and the client must start over.
 	LastAckedSequence uint64 `protobuf:"varint,3,opt,name=last_acked_sequence,json=lastAckedSequence,proto3" json:"last_acked_sequence,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// Run that assigned last_acked_sequence. Empty uses the legacy sequence
+	// rules above. A different run resumes from the oldest event buffered by
+	// the current run.
+	LastAckedRunId string `protobuf:"bytes,4,opt,name=last_acked_run_id,json=lastAckedRunId,proto3" json:"last_acked_run_id,omitempty"`
+	// Requests a SubscribeWithAckReady response before event delivery. Clients
+	// that do not set this retain the original event-only response stream.
+	AcceptReady   bool `protobuf:"varint,5,opt,name=accept_ready,json=acceptReady,proto3" json:"accept_ready,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *SubscribeWithAckStart) Reset() {
@@ -392,6 +412,20 @@ func (x *SubscribeWithAckStart) GetLastAckedSequence() uint64 {
 		return x.LastAckedSequence
 	}
 	return 0
+}
+
+func (x *SubscribeWithAckStart) GetLastAckedRunId() string {
+	if x != nil {
+		return x.LastAckedRunId
+	}
+	return ""
+}
+
+func (x *SubscribeWithAckStart) GetAcceptReady() bool {
+	if x != nil {
+		return x.AcceptReady
+	}
+	return false
 }
 
 // SubscribeWithAckAck acknowledges every event up to and including
@@ -522,16 +556,73 @@ func (*SubscribeWithAckRequest_Start) isSubscribeWithAckRequest_Message() {}
 
 func (*SubscribeWithAckRequest_Ack) isSubscribeWithAckRequest_Message() {}
 
+// SubscribeWithAckReady fixes the subscription's resume position before any
+// events are delivered.
+type SubscribeWithAckReady struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	RunId string                 `protobuf:"bytes,1,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
+	// Last sequence considered consumed. Event delivery starts with the next
+	// sequence; when a run changes, this is one below the oldest buffered event.
+	ResumeFromSequence uint64 `protobuf:"varint,2,opt,name=resume_from_sequence,json=resumeFromSequence,proto3" json:"resume_from_sequence,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *SubscribeWithAckReady) Reset() {
+	*x = SubscribeWithAckReady{}
+	mi := &file_v1alpha1_event_event_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SubscribeWithAckReady) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SubscribeWithAckReady) ProtoMessage() {}
+
+func (x *SubscribeWithAckReady) ProtoReflect() protoreflect.Message {
+	mi := &file_v1alpha1_event_event_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SubscribeWithAckReady.ProtoReflect.Descriptor instead.
+func (*SubscribeWithAckReady) Descriptor() ([]byte, []int) {
+	return file_v1alpha1_event_event_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *SubscribeWithAckReady) GetRunId() string {
+	if x != nil {
+		return x.RunId
+	}
+	return ""
+}
+
+func (x *SubscribeWithAckReady) GetResumeFromSequence() uint64 {
+	if x != nil {
+		return x.ResumeFromSequence
+	}
+	return 0
+}
+
 type SubscribeWithAckResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Event         *Event                 `protobuf:"bytes,1,opt,name=event,proto3" json:"event,omitempty"`
+	Ready         *SubscribeWithAckReady `protobuf:"bytes,2,opt,name=ready,proto3" json:"ready,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *SubscribeWithAckResponse) Reset() {
 	*x = SubscribeWithAckResponse{}
-	mi := &file_v1alpha1_event_event_proto_msgTypes[7]
+	mi := &file_v1alpha1_event_event_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -543,7 +634,7 @@ func (x *SubscribeWithAckResponse) String() string {
 func (*SubscribeWithAckResponse) ProtoMessage() {}
 
 func (x *SubscribeWithAckResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_event_event_proto_msgTypes[7]
+	mi := &file_v1alpha1_event_event_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -556,12 +647,19 @@ func (x *SubscribeWithAckResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubscribeWithAckResponse.ProtoReflect.Descriptor instead.
 func (*SubscribeWithAckResponse) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_event_event_proto_rawDescGZIP(), []int{7}
+	return file_v1alpha1_event_event_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *SubscribeWithAckResponse) GetEvent() *Event {
 	if x != nil {
 		return x.Event
+	}
+	return nil
+}
+
+func (x *SubscribeWithAckResponse) GetReady() *SubscribeWithAckReady {
+	if x != nil {
+		return x.Ready
 	}
 	return nil
 }
@@ -575,7 +673,7 @@ type PublishRequest struct {
 
 func (x *PublishRequest) Reset() {
 	*x = PublishRequest{}
-	mi := &file_v1alpha1_event_event_proto_msgTypes[8]
+	mi := &file_v1alpha1_event_event_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -587,7 +685,7 @@ func (x *PublishRequest) String() string {
 func (*PublishRequest) ProtoMessage() {}
 
 func (x *PublishRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_event_event_proto_msgTypes[8]
+	mi := &file_v1alpha1_event_event_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -600,7 +698,7 @@ func (x *PublishRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PublishRequest.ProtoReflect.Descriptor instead.
 func (*PublishRequest) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_event_event_proto_rawDescGZIP(), []int{8}
+	return file_v1alpha1_event_event_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *PublishRequest) GetEvent() *Event {
@@ -618,7 +716,7 @@ type PublishResponse struct {
 
 func (x *PublishResponse) Reset() {
 	*x = PublishResponse{}
-	mi := &file_v1alpha1_event_event_proto_msgTypes[9]
+	mi := &file_v1alpha1_event_event_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -630,7 +728,7 @@ func (x *PublishResponse) String() string {
 func (*PublishResponse) ProtoMessage() {}
 
 func (x *PublishResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_event_event_proto_msgTypes[9]
+	mi := &file_v1alpha1_event_event_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -643,7 +741,7 @@ func (x *PublishResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PublishResponse.ProtoReflect.Descriptor instead.
 func (*PublishResponse) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_event_event_proto_rawDescGZIP(), []int{9}
+	return file_v1alpha1_event_event_proto_rawDescGZIP(), []int{10}
 }
 
 type PublishBatchRequest struct {
@@ -655,7 +753,7 @@ type PublishBatchRequest struct {
 
 func (x *PublishBatchRequest) Reset() {
 	*x = PublishBatchRequest{}
-	mi := &file_v1alpha1_event_event_proto_msgTypes[10]
+	mi := &file_v1alpha1_event_event_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -667,7 +765,7 @@ func (x *PublishBatchRequest) String() string {
 func (*PublishBatchRequest) ProtoMessage() {}
 
 func (x *PublishBatchRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_event_event_proto_msgTypes[10]
+	mi := &file_v1alpha1_event_event_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -680,7 +778,7 @@ func (x *PublishBatchRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PublishBatchRequest.ProtoReflect.Descriptor instead.
 func (*PublishBatchRequest) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_event_event_proto_rawDescGZIP(), []int{10}
+	return file_v1alpha1_event_event_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *PublishBatchRequest) GetEvents() []*Event {
@@ -700,7 +798,7 @@ type PublishBatchResponse struct {
 
 func (x *PublishBatchResponse) Reset() {
 	*x = PublishBatchResponse{}
-	mi := &file_v1alpha1_event_event_proto_msgTypes[11]
+	mi := &file_v1alpha1_event_event_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -712,7 +810,7 @@ func (x *PublishBatchResponse) String() string {
 func (*PublishBatchResponse) ProtoMessage() {}
 
 func (x *PublishBatchResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_event_event_proto_msgTypes[11]
+	mi := &file_v1alpha1_event_event_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -725,7 +823,7 @@ func (x *PublishBatchResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PublishBatchResponse.ProtoReflect.Descriptor instead.
 func (*PublishBatchResponse) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_event_event_proto_rawDescGZIP(), []int{11}
+	return file_v1alpha1_event_event_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *PublishBatchResponse) GetResults() []*PublishBatchResult {
@@ -748,7 +846,7 @@ type PublishBatchResult struct {
 
 func (x *PublishBatchResult) Reset() {
 	*x = PublishBatchResult{}
-	mi := &file_v1alpha1_event_event_proto_msgTypes[12]
+	mi := &file_v1alpha1_event_event_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -760,7 +858,7 @@ func (x *PublishBatchResult) String() string {
 func (*PublishBatchResult) ProtoMessage() {}
 
 func (x *PublishBatchResult) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_event_event_proto_msgTypes[12]
+	mi := &file_v1alpha1_event_event_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -773,7 +871,7 @@ func (x *PublishBatchResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PublishBatchResult.ProtoReflect.Descriptor instead.
 func (*PublishBatchResult) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_event_event_proto_rawDescGZIP(), []int{12}
+	return file_v1alpha1_event_event_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *PublishBatchResult) GetEventId() string {
@@ -802,7 +900,7 @@ type PublishFailure struct {
 
 func (x *PublishFailure) Reset() {
 	*x = PublishFailure{}
-	mi := &file_v1alpha1_event_event_proto_msgTypes[13]
+	mi := &file_v1alpha1_event_event_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -814,7 +912,7 @@ func (x *PublishFailure) String() string {
 func (*PublishFailure) ProtoMessage() {}
 
 func (x *PublishFailure) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_event_event_proto_msgTypes[13]
+	mi := &file_v1alpha1_event_event_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -827,7 +925,7 @@ func (x *PublishFailure) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PublishFailure.ProtoReflect.Descriptor instead.
 func (*PublishFailure) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_event_event_proto_rawDescGZIP(), []int{13}
+	return file_v1alpha1_event_event_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *PublishFailure) GetCode() PublishFailureCode {
@@ -852,7 +950,7 @@ type ListEventTypesRequest struct {
 
 func (x *ListEventTypesRequest) Reset() {
 	*x = ListEventTypesRequest{}
-	mi := &file_v1alpha1_event_event_proto_msgTypes[14]
+	mi := &file_v1alpha1_event_event_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -864,7 +962,7 @@ func (x *ListEventTypesRequest) String() string {
 func (*ListEventTypesRequest) ProtoMessage() {}
 
 func (x *ListEventTypesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_event_event_proto_msgTypes[14]
+	mi := &file_v1alpha1_event_event_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -877,7 +975,7 @@ func (x *ListEventTypesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListEventTypesRequest.ProtoReflect.Descriptor instead.
 func (*ListEventTypesRequest) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_event_event_proto_rawDescGZIP(), []int{14}
+	return file_v1alpha1_event_event_proto_rawDescGZIP(), []int{15}
 }
 
 type ListEventTypesResponse struct {
@@ -889,7 +987,7 @@ type ListEventTypesResponse struct {
 
 func (x *ListEventTypesResponse) Reset() {
 	*x = ListEventTypesResponse{}
-	mi := &file_v1alpha1_event_event_proto_msgTypes[15]
+	mi := &file_v1alpha1_event_event_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -901,7 +999,7 @@ func (x *ListEventTypesResponse) String() string {
 func (*ListEventTypesResponse) ProtoMessage() {}
 
 func (x *ListEventTypesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_event_event_proto_msgTypes[15]
+	mi := &file_v1alpha1_event_event_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -914,7 +1012,7 @@ func (x *ListEventTypesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListEventTypesResponse.ProtoReflect.Descriptor instead.
 func (*ListEventTypesResponse) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_event_event_proto_rawDescGZIP(), []int{15}
+	return file_v1alpha1_event_event_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ListEventTypesResponse) GetEventTypes() []*EventTypeInfo {
@@ -943,7 +1041,7 @@ type EventTypeInfo struct {
 
 func (x *EventTypeInfo) Reset() {
 	*x = EventTypeInfo{}
-	mi := &file_v1alpha1_event_event_proto_msgTypes[16]
+	mi := &file_v1alpha1_event_event_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -955,7 +1053,7 @@ func (x *EventTypeInfo) String() string {
 func (*EventTypeInfo) ProtoMessage() {}
 
 func (x *EventTypeInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_event_event_proto_msgTypes[16]
+	mi := &file_v1alpha1_event_event_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -968,7 +1066,7 @@ func (x *EventTypeInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EventTypeInfo.ProtoReflect.Descriptor instead.
 func (*EventTypeInfo) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_event_event_proto_rawDescGZIP(), []int{16}
+	return file_v1alpha1_event_event_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *EventTypeInfo) GetName() string {
@@ -1009,7 +1107,7 @@ type GetEventSchemaRequest struct {
 
 func (x *GetEventSchemaRequest) Reset() {
 	*x = GetEventSchemaRequest{}
-	mi := &file_v1alpha1_event_event_proto_msgTypes[17]
+	mi := &file_v1alpha1_event_event_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1021,7 +1119,7 @@ func (x *GetEventSchemaRequest) String() string {
 func (*GetEventSchemaRequest) ProtoMessage() {}
 
 func (x *GetEventSchemaRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_event_event_proto_msgTypes[17]
+	mi := &file_v1alpha1_event_event_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1034,7 +1132,7 @@ func (x *GetEventSchemaRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetEventSchemaRequest.ProtoReflect.Descriptor instead.
 func (*GetEventSchemaRequest) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_event_event_proto_rawDescGZIP(), []int{17}
+	return file_v1alpha1_event_event_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *GetEventSchemaRequest) GetEventType() string {
@@ -1062,7 +1160,7 @@ type GetEventSchemaResponse struct {
 
 func (x *GetEventSchemaResponse) Reset() {
 	*x = GetEventSchemaResponse{}
-	mi := &file_v1alpha1_event_event_proto_msgTypes[18]
+	mi := &file_v1alpha1_event_event_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1074,7 +1172,7 @@ func (x *GetEventSchemaResponse) String() string {
 func (*GetEventSchemaResponse) ProtoMessage() {}
 
 func (x *GetEventSchemaResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_event_event_proto_msgTypes[18]
+	mi := &file_v1alpha1_event_event_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1087,7 +1185,7 @@ func (x *GetEventSchemaResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetEventSchemaResponse.ProtoReflect.Descriptor instead.
 func (*GetEventSchemaResponse) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_event_event_proto_rawDescGZIP(), []int{18}
+	return file_v1alpha1_event_event_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *GetEventSchemaResponse) GetInfo() *EventTypeInfo {
@@ -1119,7 +1217,7 @@ const file_v1alpha1_event_event_proto_rawDesc = "" +
 	"\vEventFilter\x12\x1f\n" +
 	"\vevent_types\x18\x01 \x03(\tR\n" +
 	"eventTypes\x12&\n" +
-	"\x0forigin_node_ids\x18\x02 \x03(\tR\roriginNodeIds\"\xe7\x01\n" +
+	"\x0forigin_node_ids\x18\x02 \x03(\tR\roriginNodeIds\"\xfe\x01\n" +
 	"\x05Event\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -1128,23 +1226,30 @@ const file_v1alpha1_event_event_proto_rawDesc = "" +
 	"\x0eorigin_node_id\x18\x04 \x01(\tR\foriginNodeId\x12\x1a\n" +
 	"\bsequence\x18\x05 \x01(\x04R\bsequence\x123\n" +
 	"\n" +
-	"typed_data\x18\x06 \x01(\v2\x14.google.protobuf.AnyR\ttypedData\"L\n" +
+	"typed_data\x18\x06 \x01(\v2\x14.google.protobuf.AnyR\ttypedData\x12\x15\n" +
+	"\x06run_id\x18\a \x01(\tR\x05runId\"L\n" +
 	"\x10SubscribeRequest\x128\n" +
 	"\x06filter\x18\x01 \x01(\v2 .bark.v1alpha1.event.EventFilterR\x06filter\"E\n" +
 	"\x11SubscribeResponse\x120\n" +
-	"\x05event\x18\x01 \x01(\v2\x1a.bark.v1alpha1.event.EventR\x05event\"\xa6\x01\n" +
+	"\x05event\x18\x01 \x01(\v2\x1a.bark.v1alpha1.event.EventR\x05event\"\xf4\x01\n" +
 	"\x15SubscribeWithAckStart\x128\n" +
 	"\x06filter\x18\x01 \x01(\v2 .bark.v1alpha1.event.EventFilterR\x06filter\x12#\n" +
 	"\rsubscriber_id\x18\x02 \x01(\tR\fsubscriberId\x12.\n" +
-	"\x13last_acked_sequence\x18\x03 \x01(\x04R\x11lastAckedSequence\"1\n" +
+	"\x13last_acked_sequence\x18\x03 \x01(\x04R\x11lastAckedSequence\x12)\n" +
+	"\x11last_acked_run_id\x18\x04 \x01(\tR\x0elastAckedRunId\x12!\n" +
+	"\faccept_ready\x18\x05 \x01(\bR\vacceptReady\"1\n" +
 	"\x13SubscribeWithAckAck\x12\x1a\n" +
 	"\bsequence\x18\x01 \x01(\x04R\bsequence\"\xa6\x01\n" +
 	"\x17SubscribeWithAckRequest\x12B\n" +
 	"\x05start\x18\x01 \x01(\v2*.bark.v1alpha1.event.SubscribeWithAckStartH\x00R\x05start\x12<\n" +
 	"\x03ack\x18\x02 \x01(\v2(.bark.v1alpha1.event.SubscribeWithAckAckH\x00R\x03ackB\t\n" +
-	"\amessage\"L\n" +
+	"\amessage\"`\n" +
+	"\x15SubscribeWithAckReady\x12\x15\n" +
+	"\x06run_id\x18\x01 \x01(\tR\x05runId\x120\n" +
+	"\x14resume_from_sequence\x18\x02 \x01(\x04R\x12resumeFromSequence\"\x8e\x01\n" +
 	"\x18SubscribeWithAckResponse\x120\n" +
-	"\x05event\x18\x01 \x01(\v2\x1a.bark.v1alpha1.event.EventR\x05event\"B\n" +
+	"\x05event\x18\x01 \x01(\v2\x1a.bark.v1alpha1.event.EventR\x05event\x12@\n" +
+	"\x05ready\x18\x02 \x01(\v2*.bark.v1alpha1.event.SubscribeWithAckReadyR\x05ready\"B\n" +
 	"\x0ePublishRequest\x120\n" +
 	"\x05event\x18\x01 \x01(\v2\x1a.bark.v1alpha1.event.EventR\x05event\"\x11\n" +
 	"\x0fPublishResponse\"I\n" +
@@ -1202,7 +1307,7 @@ func file_v1alpha1_event_event_proto_rawDescGZIP() []byte {
 }
 
 var file_v1alpha1_event_event_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_v1alpha1_event_event_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
+var file_v1alpha1_event_event_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
 var file_v1alpha1_event_event_proto_goTypes = []any{
 	(PublishFailureCode)(0),                // 0: bark.v1alpha1.event.PublishFailureCode
 	(*EventFilter)(nil),                    // 1: bark.v1alpha1.event.EventFilter
@@ -1212,56 +1317,58 @@ var file_v1alpha1_event_event_proto_goTypes = []any{
 	(*SubscribeWithAckStart)(nil),          // 5: bark.v1alpha1.event.SubscribeWithAckStart
 	(*SubscribeWithAckAck)(nil),            // 6: bark.v1alpha1.event.SubscribeWithAckAck
 	(*SubscribeWithAckRequest)(nil),        // 7: bark.v1alpha1.event.SubscribeWithAckRequest
-	(*SubscribeWithAckResponse)(nil),       // 8: bark.v1alpha1.event.SubscribeWithAckResponse
-	(*PublishRequest)(nil),                 // 9: bark.v1alpha1.event.PublishRequest
-	(*PublishResponse)(nil),                // 10: bark.v1alpha1.event.PublishResponse
-	(*PublishBatchRequest)(nil),            // 11: bark.v1alpha1.event.PublishBatchRequest
-	(*PublishBatchResponse)(nil),           // 12: bark.v1alpha1.event.PublishBatchResponse
-	(*PublishBatchResult)(nil),             // 13: bark.v1alpha1.event.PublishBatchResult
-	(*PublishFailure)(nil),                 // 14: bark.v1alpha1.event.PublishFailure
-	(*ListEventTypesRequest)(nil),          // 15: bark.v1alpha1.event.ListEventTypesRequest
-	(*ListEventTypesResponse)(nil),         // 16: bark.v1alpha1.event.ListEventTypesResponse
-	(*EventTypeInfo)(nil),                  // 17: bark.v1alpha1.event.EventTypeInfo
-	(*GetEventSchemaRequest)(nil),          // 18: bark.v1alpha1.event.GetEventSchemaRequest
-	(*GetEventSchemaResponse)(nil),         // 19: bark.v1alpha1.event.GetEventSchemaResponse
-	(*timestamppb.Timestamp)(nil),          // 20: google.protobuf.Timestamp
-	(*anypb.Any)(nil),                      // 21: google.protobuf.Any
-	(*descriptorpb.FileDescriptorSet)(nil), // 22: google.protobuf.FileDescriptorSet
+	(*SubscribeWithAckReady)(nil),          // 8: bark.v1alpha1.event.SubscribeWithAckReady
+	(*SubscribeWithAckResponse)(nil),       // 9: bark.v1alpha1.event.SubscribeWithAckResponse
+	(*PublishRequest)(nil),                 // 10: bark.v1alpha1.event.PublishRequest
+	(*PublishResponse)(nil),                // 11: bark.v1alpha1.event.PublishResponse
+	(*PublishBatchRequest)(nil),            // 12: bark.v1alpha1.event.PublishBatchRequest
+	(*PublishBatchResponse)(nil),           // 13: bark.v1alpha1.event.PublishBatchResponse
+	(*PublishBatchResult)(nil),             // 14: bark.v1alpha1.event.PublishBatchResult
+	(*PublishFailure)(nil),                 // 15: bark.v1alpha1.event.PublishFailure
+	(*ListEventTypesRequest)(nil),          // 16: bark.v1alpha1.event.ListEventTypesRequest
+	(*ListEventTypesResponse)(nil),         // 17: bark.v1alpha1.event.ListEventTypesResponse
+	(*EventTypeInfo)(nil),                  // 18: bark.v1alpha1.event.EventTypeInfo
+	(*GetEventSchemaRequest)(nil),          // 19: bark.v1alpha1.event.GetEventSchemaRequest
+	(*GetEventSchemaResponse)(nil),         // 20: bark.v1alpha1.event.GetEventSchemaResponse
+	(*timestamppb.Timestamp)(nil),          // 21: google.protobuf.Timestamp
+	(*anypb.Any)(nil),                      // 22: google.protobuf.Any
+	(*descriptorpb.FileDescriptorSet)(nil), // 23: google.protobuf.FileDescriptorSet
 }
 var file_v1alpha1_event_event_proto_depIdxs = []int32{
-	20, // 0: bark.v1alpha1.event.Event.timestamp:type_name -> google.protobuf.Timestamp
-	21, // 1: bark.v1alpha1.event.Event.typed_data:type_name -> google.protobuf.Any
+	21, // 0: bark.v1alpha1.event.Event.timestamp:type_name -> google.protobuf.Timestamp
+	22, // 1: bark.v1alpha1.event.Event.typed_data:type_name -> google.protobuf.Any
 	1,  // 2: bark.v1alpha1.event.SubscribeRequest.filter:type_name -> bark.v1alpha1.event.EventFilter
 	2,  // 3: bark.v1alpha1.event.SubscribeResponse.event:type_name -> bark.v1alpha1.event.Event
 	1,  // 4: bark.v1alpha1.event.SubscribeWithAckStart.filter:type_name -> bark.v1alpha1.event.EventFilter
 	5,  // 5: bark.v1alpha1.event.SubscribeWithAckRequest.start:type_name -> bark.v1alpha1.event.SubscribeWithAckStart
 	6,  // 6: bark.v1alpha1.event.SubscribeWithAckRequest.ack:type_name -> bark.v1alpha1.event.SubscribeWithAckAck
 	2,  // 7: bark.v1alpha1.event.SubscribeWithAckResponse.event:type_name -> bark.v1alpha1.event.Event
-	2,  // 8: bark.v1alpha1.event.PublishRequest.event:type_name -> bark.v1alpha1.event.Event
-	2,  // 9: bark.v1alpha1.event.PublishBatchRequest.events:type_name -> bark.v1alpha1.event.Event
-	13, // 10: bark.v1alpha1.event.PublishBatchResponse.results:type_name -> bark.v1alpha1.event.PublishBatchResult
-	14, // 11: bark.v1alpha1.event.PublishBatchResult.failure:type_name -> bark.v1alpha1.event.PublishFailure
-	0,  // 12: bark.v1alpha1.event.PublishFailure.code:type_name -> bark.v1alpha1.event.PublishFailureCode
-	17, // 13: bark.v1alpha1.event.ListEventTypesResponse.event_types:type_name -> bark.v1alpha1.event.EventTypeInfo
-	17, // 14: bark.v1alpha1.event.GetEventSchemaResponse.info:type_name -> bark.v1alpha1.event.EventTypeInfo
-	22, // 15: bark.v1alpha1.event.GetEventSchemaResponse.payload_descriptors:type_name -> google.protobuf.FileDescriptorSet
-	3,  // 16: bark.v1alpha1.event.EventService.Subscribe:input_type -> bark.v1alpha1.event.SubscribeRequest
-	7,  // 17: bark.v1alpha1.event.EventService.SubscribeWithAck:input_type -> bark.v1alpha1.event.SubscribeWithAckRequest
-	9,  // 18: bark.v1alpha1.event.EventService.Publish:input_type -> bark.v1alpha1.event.PublishRequest
-	11, // 19: bark.v1alpha1.event.EventService.PublishBatch:input_type -> bark.v1alpha1.event.PublishBatchRequest
-	15, // 20: bark.v1alpha1.event.EventService.ListEventTypes:input_type -> bark.v1alpha1.event.ListEventTypesRequest
-	18, // 21: bark.v1alpha1.event.EventService.GetEventSchema:input_type -> bark.v1alpha1.event.GetEventSchemaRequest
-	4,  // 22: bark.v1alpha1.event.EventService.Subscribe:output_type -> bark.v1alpha1.event.SubscribeResponse
-	8,  // 23: bark.v1alpha1.event.EventService.SubscribeWithAck:output_type -> bark.v1alpha1.event.SubscribeWithAckResponse
-	10, // 24: bark.v1alpha1.event.EventService.Publish:output_type -> bark.v1alpha1.event.PublishResponse
-	12, // 25: bark.v1alpha1.event.EventService.PublishBatch:output_type -> bark.v1alpha1.event.PublishBatchResponse
-	16, // 26: bark.v1alpha1.event.EventService.ListEventTypes:output_type -> bark.v1alpha1.event.ListEventTypesResponse
-	19, // 27: bark.v1alpha1.event.EventService.GetEventSchema:output_type -> bark.v1alpha1.event.GetEventSchemaResponse
-	22, // [22:28] is the sub-list for method output_type
-	16, // [16:22] is the sub-list for method input_type
-	16, // [16:16] is the sub-list for extension type_name
-	16, // [16:16] is the sub-list for extension extendee
-	0,  // [0:16] is the sub-list for field type_name
+	8,  // 8: bark.v1alpha1.event.SubscribeWithAckResponse.ready:type_name -> bark.v1alpha1.event.SubscribeWithAckReady
+	2,  // 9: bark.v1alpha1.event.PublishRequest.event:type_name -> bark.v1alpha1.event.Event
+	2,  // 10: bark.v1alpha1.event.PublishBatchRequest.events:type_name -> bark.v1alpha1.event.Event
+	14, // 11: bark.v1alpha1.event.PublishBatchResponse.results:type_name -> bark.v1alpha1.event.PublishBatchResult
+	15, // 12: bark.v1alpha1.event.PublishBatchResult.failure:type_name -> bark.v1alpha1.event.PublishFailure
+	0,  // 13: bark.v1alpha1.event.PublishFailure.code:type_name -> bark.v1alpha1.event.PublishFailureCode
+	18, // 14: bark.v1alpha1.event.ListEventTypesResponse.event_types:type_name -> bark.v1alpha1.event.EventTypeInfo
+	18, // 15: bark.v1alpha1.event.GetEventSchemaResponse.info:type_name -> bark.v1alpha1.event.EventTypeInfo
+	23, // 16: bark.v1alpha1.event.GetEventSchemaResponse.payload_descriptors:type_name -> google.protobuf.FileDescriptorSet
+	3,  // 17: bark.v1alpha1.event.EventService.Subscribe:input_type -> bark.v1alpha1.event.SubscribeRequest
+	7,  // 18: bark.v1alpha1.event.EventService.SubscribeWithAck:input_type -> bark.v1alpha1.event.SubscribeWithAckRequest
+	10, // 19: bark.v1alpha1.event.EventService.Publish:input_type -> bark.v1alpha1.event.PublishRequest
+	12, // 20: bark.v1alpha1.event.EventService.PublishBatch:input_type -> bark.v1alpha1.event.PublishBatchRequest
+	16, // 21: bark.v1alpha1.event.EventService.ListEventTypes:input_type -> bark.v1alpha1.event.ListEventTypesRequest
+	19, // 22: bark.v1alpha1.event.EventService.GetEventSchema:input_type -> bark.v1alpha1.event.GetEventSchemaRequest
+	4,  // 23: bark.v1alpha1.event.EventService.Subscribe:output_type -> bark.v1alpha1.event.SubscribeResponse
+	9,  // 24: bark.v1alpha1.event.EventService.SubscribeWithAck:output_type -> bark.v1alpha1.event.SubscribeWithAckResponse
+	11, // 25: bark.v1alpha1.event.EventService.Publish:output_type -> bark.v1alpha1.event.PublishResponse
+	13, // 26: bark.v1alpha1.event.EventService.PublishBatch:output_type -> bark.v1alpha1.event.PublishBatchResponse
+	17, // 27: bark.v1alpha1.event.EventService.ListEventTypes:output_type -> bark.v1alpha1.event.ListEventTypesResponse
+	20, // 28: bark.v1alpha1.event.EventService.GetEventSchema:output_type -> bark.v1alpha1.event.GetEventSchemaResponse
+	23, // [23:29] is the sub-list for method output_type
+	17, // [17:23] is the sub-list for method input_type
+	17, // [17:17] is the sub-list for extension type_name
+	17, // [17:17] is the sub-list for extension extendee
+	0,  // [0:17] is the sub-list for field type_name
 }
 
 func init() { file_v1alpha1_event_event_proto_init() }
@@ -1279,7 +1386,7 @@ func file_v1alpha1_event_event_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1alpha1_event_event_proto_rawDesc), len(file_v1alpha1_event_event_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   19,
+			NumMessages:   20,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

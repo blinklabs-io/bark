@@ -99,6 +99,11 @@ message Event {
 
   // Typed payload for the event type, when the registry defines one.
   google.protobuf.Any typed_data = 6;
+
+  // Identifies the serving process that assigned sequence. A client resumes
+  // with both run_id and sequence because sequence restarts in a new run.
+  // Empty on events sent to Publish.
+  string run_id = 7;
 }
 
 message SubscribeRequest {
@@ -120,10 +125,21 @@ message SubscribeWithAckStart {
   string subscriber_id = 2;
 
   // Sequence of the last event the client processed. The server resumes
-  // with the next event. Zero starts from the current position of the
-  // stream. If the requested position is no longer buffered, the server
-  // closes the stream with OUT_OF_RANGE, and the client must start over.
+  // with the next event. With no last_acked_run_id, zero starts from the
+  // current position while a non-zero value retains legacy sequence-only
+  // resume behavior. With a run id, zero is a valid resume cursor. If the
+  // requested position is no longer buffered, the server closes the stream
+  // with OUT_OF_RANGE, and the client must start over.
   uint64 last_acked_sequence = 3;
+
+  // Run that assigned last_acked_sequence. Empty uses the legacy sequence
+  // rules above. A different run resumes from the oldest event buffered by
+  // the current run.
+  string last_acked_run_id = 4;
+
+  // Requests a SubscribeWithAckReady response before event delivery. Clients
+  // that do not set this retain the original event-only response stream.
+  bool accept_ready = 5;
 }
 
 // SubscribeWithAckAck acknowledges every event up to and including
@@ -139,8 +155,19 @@ message SubscribeWithAckRequest {
   }
 }
 
+// SubscribeWithAckReady fixes the subscription's resume position before any
+// events are delivered.
+message SubscribeWithAckReady {
+  string run_id = 1;
+
+  // Last sequence considered consumed. Event delivery starts with the next
+  // sequence; when a run changes, this is one below the oldest buffered event.
+  uint64 resume_from_sequence = 2;
+}
+
 message SubscribeWithAckResponse {
   Event event = 1;
+  SubscribeWithAckReady ready = 2;
 }
 
 message PublishRequest {

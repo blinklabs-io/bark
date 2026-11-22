@@ -159,8 +159,12 @@ type AckConfig struct {
 	// OriginNodeIDs selects events by the node that created them. Empty
 	// selects events from any node.
 	OriginNodeIDs []string
-	// LastAckedSequence is the sequence of the last event a previous run
-	// processed, or zero to start from the stream's current position.
+	// LastAckedRunID identifies the serving run that assigned
+	// LastAckedSequence. Empty with a zero sequence starts a new subscription;
+	// empty with a non-zero sequence preserves sequence-only resume behavior.
+	LastAckedRunID string
+	// LastAckedSequence is the sequence of the last event the client
+	// processed in LastAckedRunID.
 	LastAckedSequence uint64
 	// InitialBackoff is the first wait before reconnecting. It doubles on
 	// each consecutive failure up to MaxBackoff. Zero selects one second.
@@ -172,7 +176,7 @@ type AckConfig struct {
 
 // SubscribeWithAck calls handler for every event, in order, and acknowledges
 // an event once handler returns nil for it. When the stream drops, it
-// reconnects and resumes after the last acknowledged sequence, so a
+// reconnects and resumes after the last acknowledged run and sequence, so a
 // transient disconnect loses nothing. An event the server redelivers is
 // skipped without calling handler again.
 //
@@ -197,10 +201,17 @@ func (c *Client) SubscribeWithAck(
 	if maxBackoff <= 0 {
 		maxBackoff = defaultMaxBackoff
 	}
+	runID := cfg.LastAckedRunID
 	last := cfg.LastAckedSequence
 	backoff := initial
 	for {
-		progressed, err := c.ackSession(ctx, cfg, &last, handler)
+		progressed, err := c.ackSession(
+			ctx,
+			cfg,
+			&runID,
+			&last,
+			handler,
+		)
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
@@ -228,6 +239,7 @@ func (c *Client) SubscribeWithAck(
 func (c *Client) ackSession(
 	ctx context.Context,
 	cfg AckConfig,
+	runID *string,
 	last *uint64,
 	handler func(context.Context, *eventv1alpha1.Event) error,
 ) (progressed bool, err error) {
@@ -251,7 +263,9 @@ func (c *Client) ackSession(
 					OriginNodeIds: cfg.OriginNodeIDs,
 				},
 				SubscriberId:      cfg.SubscriberID,
+				LastAckedRunId:    *runID,
 				LastAckedSequence: *last,
+				AcceptReady:       true,
 			},
 		},
 	})
@@ -263,7 +277,31 @@ func (c *Client) ackSession(
 		if recvErr != nil {
 			return progressed, recvErr
 		}
+		ready := resp.GetReady()
+		if ready != nil {
+			if ready.GetRunId() == "" {
+				return progressed, connect.NewError(
+					connect.CodeInvalidArgument,
+					errors.New("eventclient: ready response has no run_id"),
+				)
+			}
+			*runID = ready.GetRunId()
+			*last = ready.GetResumeFromSequence()
+		}
 		event := resp.GetEvent()
+		if event == nil {
+			if ready != nil {
+				continue
+			}
+			return progressed, connect.NewError(
+				connect.CodeInvalidArgument,
+				errors.New("eventclient: response has no event or ready state"),
+			)
+		}
+		if event.GetRunId() != "" && event.GetRunId() != *runID {
+			*runID = event.GetRunId()
+			*last = 0
+		}
 		if event.GetSequence() > *last {
 			if handlerErr := handler(ctx, event); handlerErr != nil {
 				return progressed, &handlerError{err: handlerErr}
