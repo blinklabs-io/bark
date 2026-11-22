@@ -354,8 +354,11 @@ type SubscribeWithAckStart struct {
 	// at the current position. A different run resumes from the oldest event
 	// buffered by the current run.
 	LastAckedRunId string `protobuf:"bytes,4,opt,name=last_acked_run_id,json=lastAckedRunId,proto3" json:"last_acked_run_id,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Requests a SubscribeWithAckReady response before event delivery. Clients
+	// that do not set this retain the original event-only response stream.
+	AcceptReady   bool `protobuf:"varint,5,opt,name=accept_ready,json=acceptReady,proto3" json:"accept_ready,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *SubscribeWithAckStart) Reset() {
@@ -414,6 +417,13 @@ func (x *SubscribeWithAckStart) GetLastAckedRunId() string {
 		return x.LastAckedRunId
 	}
 	return ""
+}
+
+func (x *SubscribeWithAckStart) GetAcceptReady() bool {
+	if x != nil {
+		return x.AcceptReady
+	}
+	return false
 }
 
 // SubscribeWithAckAck acknowledges every event up to and including
@@ -1217,12 +1227,13 @@ const file_v1alpha1_event_event_proto_rawDesc = "" +
 	"\x10SubscribeRequest\x128\n" +
 	"\x06filter\x18\x01 \x01(\v2 .bark.v1alpha1.event.EventFilterR\x06filter\"E\n" +
 	"\x11SubscribeResponse\x120\n" +
-	"\x05event\x18\x01 \x01(\v2\x1a.bark.v1alpha1.event.EventR\x05event\"\xd1\x01\n" +
+	"\x05event\x18\x01 \x01(\v2\x1a.bark.v1alpha1.event.EventR\x05event\"\xf4\x01\n" +
 	"\x15SubscribeWithAckStart\x128\n" +
 	"\x06filter\x18\x01 \x01(\v2 .bark.v1alpha1.event.EventFilterR\x06filter\x12#\n" +
 	"\rsubscriber_id\x18\x02 \x01(\tR\fsubscriberId\x12.\n" +
 	"\x13last_acked_sequence\x18\x03 \x01(\x04R\x11lastAckedSequence\x12)\n" +
-	"\x11last_acked_run_id\x18\x04 \x01(\tR\x0elastAckedRunId\"1\n" +
+	"\x11last_acked_run_id\x18\x04 \x01(\tR\x0elastAckedRunId\x12!\n" +
+	"\faccept_ready\x18\x05 \x01(\bR\vacceptReady\"1\n" +
 	"\x13SubscribeWithAckAck\x12\x1a\n" +
 	"\bsequence\x18\x01 \x01(\x04R\bsequence\"\xa6\x01\n" +
 	"\x17SubscribeWithAckRequest\x12B\n" +

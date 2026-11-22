@@ -134,6 +134,10 @@ message SubscribeWithAckStart {
   // at the current position. A different run resumes from the oldest event
   // buffered by the current run.
   string last_acked_run_id = 4;
+
+  // Requests a SubscribeWithAckReady response before event delivery. Clients
+  // that do not set this retain the original event-only response stream.
+  bool accept_ready = 5;
 }
 
 // SubscribeWithAckAck acknowledges every event up to and including

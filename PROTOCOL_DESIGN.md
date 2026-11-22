@@ -198,7 +198,7 @@ Service: EventService
 Key messages:
 - Event: envelope with a stable `id`, `event_type`, `timestamp`, `origin_node_id`, a server-assigned `run_id` and `sequence`, and an optional `typed_data` payload
 - EventFilter: the event types a subscriber wants, as registered names or category patterns such as `peergov.*`, and optionally the `origin_node_ids` to receive events from; empty selects everything
-- SubscribeWithAckStart: opens a reliable subscription with a `subscriber_id` and the last acknowledged `run_id` and `sequence` to resume from
+- SubscribeWithAckStart: opens a reliable subscription with a `subscriber_id` and the last acknowledged `run_id` and `sequence` to resume from; restart-safe clients set `accept_ready`, while older clients retain the event-only response stream
 - SubscribeWithAckReady: identifies the serving run and fixes the resume position before the first event
 - SubscribeWithAckAck: acknowledges every event up to a `sequence`
 

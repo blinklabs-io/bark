@@ -265,6 +265,7 @@ func (c *Client) ackSession(
 				SubscriberId:      cfg.SubscriberID,
 				LastAckedRunId:    *runID,
 				LastAckedSequence: *last,
+				AcceptReady:       true,
 			},
 		},
 	})

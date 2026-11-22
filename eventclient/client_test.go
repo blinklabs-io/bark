@@ -374,6 +374,12 @@ func TestSubscribeWithAckKeepsInitialPositionAcrossReconnect(t *testing.T) {
 		],
 	) error {
 		if attempt == 0 {
+			if !start.GetAcceptReady() {
+				return connect.NewError(
+					connect.CodeInvalidArgument,
+					errors.New("ready response not accepted"),
+				)
+			}
 			if err := stream.Send(ready("run-1", 10)); err != nil {
 				return err
 			}
