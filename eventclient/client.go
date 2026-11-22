@@ -160,8 +160,8 @@ type AckConfig struct {
 	// selects events from any node.
 	OriginNodeIDs []string
 	// LastAckedRunID identifies the serving run that assigned
-	// LastAckedSequence. Empty starts a new subscription at the stream's
-	// current position.
+	// LastAckedSequence. Empty with a zero sequence starts a new subscription;
+	// empty with a non-zero sequence preserves sequence-only resume behavior.
 	LastAckedRunID string
 	// LastAckedSequence is the sequence of the last event the client
 	// processed in LastAckedRunID.
@@ -277,7 +277,8 @@ func (c *Client) ackSession(
 		if recvErr != nil {
 			return progressed, recvErr
 		}
-		if ready := resp.GetReady(); ready != nil {
+		ready := resp.GetReady()
+		if ready != nil {
 			if ready.GetRunId() == "" {
 				return progressed, connect.NewError(
 					connect.CodeInvalidArgument,
@@ -286,10 +287,12 @@ func (c *Client) ackSession(
 			}
 			*runID = ready.GetRunId()
 			*last = ready.GetResumeFromSequence()
-			continue
 		}
 		event := resp.GetEvent()
 		if event == nil {
+			if ready != nil {
+				continue
+			}
 			return progressed, connect.NewError(
 				connect.CodeInvalidArgument,
 				errors.New("eventclient: response has no event or ready state"),

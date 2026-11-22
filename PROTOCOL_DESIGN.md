@@ -206,7 +206,7 @@ Key messages:
 
 - `Subscribe` is at-most-once. A subscriber that stops draining its stream is detached; it never blocks the node.
 - `SubscribeWithAck` is at-least-once. The server redelivers unacknowledged events, and a client that reconnects with its last acknowledged `run_id` and `sequence` receives everything after it. Clients de-duplicate on `Event.id`.
-- A new subscription starts at the current position. `SubscribeWithAckReady` fixes that position so a reconnect before the first event does not skip events. When the serving run changes, the subscription resumes from the oldest event buffered by the new run.
+- A new subscription with an empty run and zero sequence starts at the current position. A non-zero sequence with no run retains the legacy sequence-only resume behavior. `SubscribeWithAckReady` fixes the initial position so a reconnect before the first event does not skip events. When the serving run changes, the ready cursor is one below the oldest event buffered by the new run.
 - If the requested resume position is no longer buffered, the server closes the stream with `OUT_OF_RANGE`.
 - A node must not forward an event back to the node named in `origin_node_id`.
 - `PublishBatch` reports a failure for one event in that event's result, in request order, and still delivers the others. The call fails only for a reason that covers every event, such as the service being disabled.

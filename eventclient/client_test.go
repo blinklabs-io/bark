@@ -446,10 +446,9 @@ func TestSubscribeWithAckResetsCursorForNewRun(t *testing.T) {
 				errors.New("resume cursor not forwarded"),
 			)
 		}
-		if err := stream.Send(ready("new-run", 3)); err != nil {
-			return err
-		}
-		if err := stream.Send(runEvent("new-run", 4)); err != nil {
+		resp := runEvent("new-run", 4)
+		resp.Ready = ready("new-run", 3).GetReady()
+		if err := stream.Send(resp); err != nil {
 			return err
 		}
 		if err := waitAck(stream, 4); err != nil {

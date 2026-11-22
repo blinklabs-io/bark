@@ -346,13 +346,15 @@ type SubscribeWithAckStart struct {
 	// stream closes.
 	SubscriberId string `protobuf:"bytes,2,opt,name=subscriber_id,json=subscriberId,proto3" json:"subscriber_id,omitempty"`
 	// Sequence of the last event the client processed. The server resumes
-	// with the next event. Zero starts from the current position of the
-	// stream. If the requested position is no longer buffered, the server
-	// closes the stream with OUT_OF_RANGE, and the client must start over.
+	// with the next event. With no last_acked_run_id, zero starts from the
+	// current position while a non-zero value retains legacy sequence-only
+	// resume behavior. With a run id, zero is a valid resume cursor. If the
+	// requested position is no longer buffered, the server closes the stream
+	// with OUT_OF_RANGE, and the client must start over.
 	LastAckedSequence uint64 `protobuf:"varint,3,opt,name=last_acked_sequence,json=lastAckedSequence,proto3" json:"last_acked_sequence,omitempty"`
-	// Run that assigned last_acked_sequence. Empty starts a new subscription
-	// at the current position. A different run resumes from the oldest event
-	// buffered by the current run.
+	// Run that assigned last_acked_sequence. Empty uses the legacy sequence
+	// rules above. A different run resumes from the oldest event buffered by
+	// the current run.
 	LastAckedRunId string `protobuf:"bytes,4,opt,name=last_acked_run_id,json=lastAckedRunId,proto3" json:"last_acked_run_id,omitempty"`
 	// Requests a SubscribeWithAckReady response before event delivery. Clients
 	// that do not set this retain the original event-only response stream.
@@ -557,9 +559,11 @@ func (*SubscribeWithAckRequest_Ack) isSubscribeWithAckRequest_Message() {}
 // SubscribeWithAckReady fixes the subscription's resume position before any
 // events are delivered.
 type SubscribeWithAckReady struct {
-	state              protoimpl.MessageState `protogen:"open.v1"`
-	RunId              string                 `protobuf:"bytes,1,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
-	ResumeFromSequence uint64                 `protobuf:"varint,2,opt,name=resume_from_sequence,json=resumeFromSequence,proto3" json:"resume_from_sequence,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	RunId string                 `protobuf:"bytes,1,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
+	// Last sequence considered consumed. Event delivery starts with the next
+	// sequence; when a run changes, this is one below the oldest buffered event.
+	ResumeFromSequence uint64 `protobuf:"varint,2,opt,name=resume_from_sequence,json=resumeFromSequence,proto3" json:"resume_from_sequence,omitempty"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }

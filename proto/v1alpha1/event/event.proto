@@ -125,14 +125,16 @@ message SubscribeWithAckStart {
   string subscriber_id = 2;
 
   // Sequence of the last event the client processed. The server resumes
-  // with the next event. Zero starts from the current position of the
-  // stream. If the requested position is no longer buffered, the server
-  // closes the stream with OUT_OF_RANGE, and the client must start over.
+  // with the next event. With no last_acked_run_id, zero starts from the
+  // current position while a non-zero value retains legacy sequence-only
+  // resume behavior. With a run id, zero is a valid resume cursor. If the
+  // requested position is no longer buffered, the server closes the stream
+  // with OUT_OF_RANGE, and the client must start over.
   uint64 last_acked_sequence = 3;
 
-  // Run that assigned last_acked_sequence. Empty starts a new subscription
-  // at the current position. A different run resumes from the oldest event
-  // buffered by the current run.
+  // Run that assigned last_acked_sequence. Empty uses the legacy sequence
+  // rules above. A different run resumes from the oldest event buffered by
+  // the current run.
   string last_acked_run_id = 4;
 
   // Requests a SubscribeWithAckReady response before event delivery. Clients
@@ -157,6 +159,9 @@ message SubscribeWithAckRequest {
 // events are delivered.
 message SubscribeWithAckReady {
   string run_id = 1;
+
+  // Last sequence considered consumed. Event delivery starts with the next
+  // sequence; when a run changes, this is one below the oldest buffered event.
   uint64 resume_from_sequence = 2;
 }
 
