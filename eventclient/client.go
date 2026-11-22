@@ -176,7 +176,7 @@ type AckConfig struct {
 
 // SubscribeWithAck calls handler for every event, in order, and acknowledges
 // an event once handler returns nil for it. When the stream drops, it
-// reconnects and resumes after the last acknowledged sequence, so a
+// reconnects and resumes after the last acknowledged run and sequence, so a
 // transient disconnect loses nothing. An event the server redelivers is
 // skipped without calling handler again.
 //
