@@ -196,15 +196,17 @@ Service: EventService
 - GetEventSchema(GetEventSchemaRequest) returns (GetEventSchemaResponse)
 
 Key messages:
-- Event: envelope with a stable `id`, `event_type`, `timestamp`, `origin_node_id`, a server-assigned `sequence`, and an optional `typed_data` payload
+- Event: envelope with a stable `id`, `event_type`, `timestamp`, `origin_node_id`, a server-assigned `run_id` and `sequence`, and an optional `typed_data` payload
 - EventFilter: the event types a subscriber wants, as registered names or category patterns such as `peergov.*`, and optionally the `origin_node_ids` to receive events from; empty selects everything
-- SubscribeWithAckStart: opens a reliable subscription with a `subscriber_id` and the `last_acked_sequence` to resume from
+- SubscribeWithAckStart: opens a reliable subscription with a `subscriber_id` and the last acknowledged `run_id` and `sequence` to resume from
+- SubscribeWithAckReady: identifies the serving run and fixes the resume position before the first event
 - SubscribeWithAckAck: acknowledges every event up to a `sequence`
 
 ### Delivery Semantics
 
 - `Subscribe` is at-most-once. A subscriber that stops draining its stream is detached; it never blocks the node.
-- `SubscribeWithAck` is at-least-once. The server redelivers unacknowledged events, and a client that reconnects with its last acknowledged `sequence` receives everything after it. Clients de-duplicate on `Event.id`.
+- `SubscribeWithAck` is at-least-once. The server redelivers unacknowledged events, and a client that reconnects with its last acknowledged `run_id` and `sequence` receives everything after it. Clients de-duplicate on `Event.id`.
+- A new subscription starts at the current position. `SubscribeWithAckReady` fixes that position so a reconnect before the first event does not skip events. When the serving run changes, the subscription resumes from the oldest event buffered by the new run.
 - If the requested resume position is no longer buffered, the server closes the stream with `OUT_OF_RANGE`.
 - A node must not forward an event back to the node named in `origin_node_id`.
 - `PublishBatch` reports a failure for one event in that event's result, in request order, and still delivers the others. The call fails only for a reason that covers every event, such as the service being disabled.
@@ -215,7 +217,7 @@ Key messages:
 ### Client and Registry
 
 - `eventtype` holds the registered event type names, the exact strings Dingo's EventBus uses. A rollback is carried by `chain.update`, not by a type of its own.
-- `eventclient` wraps the streams. `SubscribeWithAck` acknowledges an event after the handler returns, reconnects with backoff when the stream drops, resumes from the last acknowledged sequence, and skips events the server redelivers. It stops on `INVALID_ARGUMENT`, `UNAUTHENTICATED`, `PERMISSION_DENIED` and `OUT_OF_RANGE`, which retrying cannot fix.
+- `eventclient` wraps the streams. `SubscribeWithAck` acknowledges an event after the handler returns, reconnects with backoff when the stream drops, resumes from the last acknowledged run and sequence, and skips events the server redelivers. It stops on `INVALID_ARGUMENT`, `UNAUTHENTICATED`, `PERMISSION_DENIED` and `OUT_OF_RANGE`, which retrying cannot fix.
 
 ### Access Control
 

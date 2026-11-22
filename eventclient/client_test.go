@@ -156,6 +156,27 @@ func seqEvent(seq uint64) *eventv1alpha1.SubscribeWithAckResponse {
 	}
 }
 
+func runEvent(
+	runID string,
+	seq uint64,
+) *eventv1alpha1.SubscribeWithAckResponse {
+	resp := seqEvent(seq)
+	resp.Event.RunId = runID
+	return resp
+}
+
+func ready(
+	runID string,
+	seq uint64,
+) *eventv1alpha1.SubscribeWithAckResponse {
+	return &eventv1alpha1.SubscribeWithAckResponse{
+		Ready: &eventv1alpha1.SubscribeWithAckReady{
+			RunId:              runID,
+			ResumeFromSequence: seq,
+		},
+	}
+}
+
 // waitAck blocks until the client has acknowledged want, so a test server can
 // drop the connection only after the client's progress is on record.
 func waitAck(
@@ -336,6 +357,124 @@ func TestSubscribeWithAckResumesAfterDisconnect(t *testing.T) {
 	}
 	if srv.starts[1].GetSubscriberId() != "s1" {
 		t.Fatalf("subscriber id changed: %v", srv.starts[1].GetSubscriberId())
+	}
+}
+
+// TestSubscribeWithAckKeepsInitialPositionAcrossReconnect checks that a
+// disconnect before the first event does not move a new subscription's start
+// position forward.
+func TestSubscribeWithAckKeepsInitialPositionAcrossReconnect(t *testing.T) {
+	srv := &fakeServer{}
+	srv.ackSession = func(
+		attempt int,
+		start *eventv1alpha1.SubscribeWithAckStart,
+		stream *connect.BidiStream[
+			eventv1alpha1.SubscribeWithAckRequest,
+			eventv1alpha1.SubscribeWithAckResponse,
+		],
+	) error {
+		if attempt == 0 {
+			if err := stream.Send(ready("run-1", 10)); err != nil {
+				return err
+			}
+			return connect.NewError(connect.CodeUnavailable, errors.New("drop"))
+		}
+		if start.GetLastAckedRunId() != "run-1" ||
+			start.GetLastAckedSequence() != 10 {
+			return connect.NewError(
+				connect.CodeInvalidArgument,
+				errors.New("initial position changed"),
+			)
+		}
+		if err := stream.Send(ready("run-1", 10)); err != nil {
+			return err
+		}
+		if err := stream.Send(runEvent("run-1", 11)); err != nil {
+			return err
+		}
+		if err := waitAck(stream, 11); err != nil {
+			return err
+		}
+		return connect.NewError(connect.CodeOutOfRange, errors.New("done"))
+	}
+	c := newClient(t, srv)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	var got []uint64
+	err := c.SubscribeWithAck(
+		ctx,
+		eventclient.AckConfig{
+			SubscriberID:   "s1",
+			InitialBackoff: time.Millisecond,
+		},
+		func(_ context.Context, e *eventv1alpha1.Event) error {
+			got = append(got, e.GetSequence())
+			return nil
+		},
+	)
+	if connect.CodeOf(err) != connect.CodeOutOfRange {
+		t.Fatalf("got %v, want the server's terminal OUT_OF_RANGE", err)
+	}
+	if want := []uint64{11}; !slices.Equal(got, want) {
+		t.Fatalf("handled %v, want %v", got, want)
+	}
+}
+
+// TestSubscribeWithAckResetsCursorForNewRun checks that a ready response from
+// a new serving run replaces the previous run's larger sequence.
+func TestSubscribeWithAckResetsCursorForNewRun(t *testing.T) {
+	srv := &fakeServer{}
+	srv.ackSession = func(
+		_ int,
+		start *eventv1alpha1.SubscribeWithAckStart,
+		stream *connect.BidiStream[
+			eventv1alpha1.SubscribeWithAckRequest,
+			eventv1alpha1.SubscribeWithAckResponse,
+		],
+	) error {
+		if start.GetLastAckedRunId() != "old-run" ||
+			start.GetLastAckedSequence() != 42 {
+			return connect.NewError(
+				connect.CodeInvalidArgument,
+				errors.New("resume cursor not forwarded"),
+			)
+		}
+		if err := stream.Send(ready("new-run", 3)); err != nil {
+			return err
+		}
+		if err := stream.Send(runEvent("new-run", 4)); err != nil {
+			return err
+		}
+		if err := waitAck(stream, 4); err != nil {
+			return err
+		}
+		return connect.NewError(connect.CodeOutOfRange, errors.New("done"))
+	}
+	c := newClient(t, srv)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	var got []*eventv1alpha1.Event
+	err := c.SubscribeWithAck(
+		ctx,
+		eventclient.AckConfig{
+			SubscriberID:      "s1",
+			LastAckedRunID:    "old-run",
+			LastAckedSequence: 42,
+			InitialBackoff:    time.Millisecond,
+		},
+		func(_ context.Context, e *eventv1alpha1.Event) error {
+			got = append(got, e)
+			return nil
+		},
+	)
+	if connect.CodeOf(err) != connect.CodeOutOfRange {
+		t.Fatalf("got %v, want the server's terminal OUT_OF_RANGE", err)
+	}
+	if len(got) != 1 || got[0].GetRunId() != "new-run" ||
+		got[0].GetSequence() != 4 {
+		t.Fatalf("handled %v, want new-run sequence 4", got)
 	}
 }
 
