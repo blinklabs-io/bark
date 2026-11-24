@@ -95,7 +95,21 @@ Key messages:
 - BlockRef: Identifies a block by hash, slot, and/or block number
 - OperationProgress: Tracks status, percent complete, and timestamps for an async operation
 - OperationRecord: Summary entry in the history log
-- SnapshotInfo: Metadata for a stored snapshot (id, name, tip, size, checksum, location)
+- SnapshotInfo: Metadata for a stored snapshot (id, name, tip, size, checksum, location, format)
+
+### Snapshot Formats
+
+`CreateSnapshotRequest.format` selects the snapshot representation. Omitting
+the field or sending `SNAPSHOT_FORMAT_UNSPECIFIED` preserves the existing
+native snapshot behavior. `SNAPSHOT_FORMAT_NATIVE` explicitly requests the
+database implementation's native representation, while
+`SNAPSHOT_FORMAT_SCLS` requests the Standard Canonical Ledger State interchange
+representation.
+
+Servers report the selected representation in `GetSnapshotStatusResponse` and
+`SnapshotInfo`. Responses for newly created snapshots use the explicit
+`SNAPSHOT_FORMAT_NATIVE` or `SNAPSHOT_FORMAT_SCLS` value; unspecified remains
+available for compatibility with older stored metadata and servers.
 
 ### Truncate Semantics
 

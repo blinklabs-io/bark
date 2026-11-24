@@ -79,6 +79,16 @@ enum OperationType {
   OPERATION_TYPE_VERIFY = 4;
 }
 
+// SnapshotFormat identifies the representation of a database snapshot.
+enum SnapshotFormat {
+  // The request omitted a format. Servers create their native format.
+  SNAPSHOT_FORMAT_UNSPECIFIED = 0;
+  // The database implementation's native snapshot representation.
+  SNAPSHOT_FORMAT_NATIVE = 1;
+  // The Standard Canonical Ledger State interchange representation.
+  SNAPSHOT_FORMAT_SCLS = 2;
+}
+
 // BlockRef identifies a block by one or more of hash, slot, or block number.
 // At least one field must be set. When multiple fields are set, all must
 // agree; the server returns INVALID_ARGUMENT if they are inconsistent.
@@ -163,6 +173,9 @@ message SnapshotInfo {
 
   // Storage location of the snapshot (local path or remote URI).
   string location = 8;
+
+  // Representation used by the stored snapshot.
+  SnapshotFormat format = 9;
 }
 
 // ─── Snapshot RPCs ────────────────────────────────────────────────────────────
@@ -173,6 +186,9 @@ message CreateSnapshotRequest {
 
   // Optional free-form description.
   string description = 2;
+
+  // Requested representation. Unspecified preserves the native format.
+  SnapshotFormat format = 3;
 }
 
 message CreateSnapshotResponse {
@@ -193,6 +209,9 @@ message GetSnapshotStatusResponse {
 
   // Snapshot identifier (populated once the snapshot is committed).
   string snapshot_id = 2;
+
+  // Representation selected for this snapshot.
+  SnapshotFormat format = 3;
 }
 
 message ListSnapshotsRequest {
