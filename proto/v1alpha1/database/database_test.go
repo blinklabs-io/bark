@@ -10,9 +10,11 @@ import (
 )
 
 func TestSnapshotFormatContract(t *testing.T) {
-	formatEnum := File_v1alpha1_database_database_proto.
-		Enums().
-		ByName("SnapshotFormat")
+	file := File_v1alpha1_database_database_proto
+	if file == nil {
+		t.Fatal("database descriptor is missing")
+	}
+	formatEnum := file.Enums().ByName("SnapshotFormat")
 	if formatEnum == nil {
 		t.Fatal("SnapshotFormat enum is missing")
 	}

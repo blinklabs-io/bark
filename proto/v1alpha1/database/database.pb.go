@@ -571,7 +571,9 @@ type CreateSnapshotRequest struct {
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	// Optional free-form description.
 	Description string `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
-	// Requested representation. Unspecified preserves the native format.
+	// Requested representation. Unspecified preserves the native format. The
+	// server returns UNIMPLEMENTED if it cannot produce the requested format,
+	// and INVALID_ARGUMENT if the value is not a known SnapshotFormat.
 	Format        SnapshotFormat `protobuf:"varint,3,opt,name=format,proto3,enum=bark.v1alpha1.database.SnapshotFormat" json:"format,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

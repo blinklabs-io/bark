@@ -106,6 +106,11 @@ database implementation's native representation, while
 `SNAPSHOT_FORMAT_SCLS` requests the Standard Canonical Ledger State interchange
 representation.
 
+A server that cannot produce the requested representation returns
+`UNIMPLEMENTED` rather than falling back to a native snapshot. A format value
+the server does not recognize, such as one sent by a newer client, is rejected
+with `INVALID_ARGUMENT`.
+
 Servers report the selected representation in `GetSnapshotStatusResponse` and
 `SnapshotInfo`. Responses for newly created snapshots use the explicit
 `SNAPSHOT_FORMAT_NATIVE` or `SNAPSHOT_FORMAT_SCLS` value; unspecified remains

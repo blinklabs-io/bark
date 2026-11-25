@@ -187,7 +187,9 @@ message CreateSnapshotRequest {
   // Optional free-form description.
   string description = 2;
 
-  // Requested representation. Unspecified preserves the native format.
+  // Requested representation. Unspecified preserves the native format. The
+  // server returns UNIMPLEMENTED if it cannot produce the requested format,
+  // and INVALID_ARGUMENT if the value is not a known SnapshotFormat.
   SnapshotFormat format = 3;
 }
 
