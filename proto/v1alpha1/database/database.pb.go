@@ -137,6 +137,59 @@ func (OperationType) EnumDescriptor() ([]byte, []int) {
 	return file_v1alpha1_database_database_proto_rawDescGZIP(), []int{1}
 }
 
+// SnapshotFormat identifies the representation of a database snapshot.
+type SnapshotFormat int32
+
+const (
+	// The request omitted a format. Servers create their native format.
+	SnapshotFormat_SNAPSHOT_FORMAT_UNSPECIFIED SnapshotFormat = 0
+	// The database implementation's native snapshot representation.
+	SnapshotFormat_SNAPSHOT_FORMAT_NATIVE SnapshotFormat = 1
+	// The Standard Canonical Ledger State interchange representation.
+	SnapshotFormat_SNAPSHOT_FORMAT_SCLS SnapshotFormat = 2
+)
+
+// Enum value maps for SnapshotFormat.
+var (
+	SnapshotFormat_name = map[int32]string{
+		0: "SNAPSHOT_FORMAT_UNSPECIFIED",
+		1: "SNAPSHOT_FORMAT_NATIVE",
+		2: "SNAPSHOT_FORMAT_SCLS",
+	}
+	SnapshotFormat_value = map[string]int32{
+		"SNAPSHOT_FORMAT_UNSPECIFIED": 0,
+		"SNAPSHOT_FORMAT_NATIVE":      1,
+		"SNAPSHOT_FORMAT_SCLS":        2,
+	}
+)
+
+func (x SnapshotFormat) Enum() *SnapshotFormat {
+	p := new(SnapshotFormat)
+	*p = x
+	return p
+}
+
+func (x SnapshotFormat) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (SnapshotFormat) Descriptor() protoreflect.EnumDescriptor {
+	return file_v1alpha1_database_database_proto_enumTypes[2].Descriptor()
+}
+
+func (SnapshotFormat) Type() protoreflect.EnumType {
+	return &file_v1alpha1_database_database_proto_enumTypes[2]
+}
+
+func (x SnapshotFormat) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use SnapshotFormat.Descriptor instead.
+func (SnapshotFormat) EnumDescriptor() ([]byte, []int) {
+	return file_v1alpha1_database_database_proto_rawDescGZIP(), []int{2}
+}
+
 // BlockRef identifies a block by one or more of hash, slot, or block number.
 // At least one field must be set. When multiple fields are set, all must
 // agree; the server returns INVALID_ARGUMENT if they are inconsistent.
@@ -412,7 +465,9 @@ type SnapshotInfo struct {
 	// When the snapshot was created.
 	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	// Storage location of the snapshot (local path or remote URI).
-	Location      string `protobuf:"bytes,8,opt,name=location,proto3" json:"location,omitempty"`
+	Location string `protobuf:"bytes,8,opt,name=location,proto3" json:"location,omitempty"`
+	// Representation used by the stored snapshot.
+	Format        SnapshotFormat `protobuf:"varint,9,opt,name=format,proto3,enum=bark.v1alpha1.database.SnapshotFormat" json:"format,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -503,12 +558,23 @@ func (x *SnapshotInfo) GetLocation() string {
 	return ""
 }
 
+func (x *SnapshotInfo) GetFormat() SnapshotFormat {
+	if x != nil {
+		return x.Format
+	}
+	return SnapshotFormat_SNAPSHOT_FORMAT_UNSPECIFIED
+}
+
 type CreateSnapshotRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Human-readable label for this snapshot.
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	// Optional free-form description.
-	Description   string `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
+	Description string `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
+	// Requested representation. Unspecified preserves the native format. The
+	// server returns UNIMPLEMENTED if it cannot produce the requested format,
+	// and INVALID_ARGUMENT if the value is not a known SnapshotFormat.
+	Format        SnapshotFormat `protobuf:"varint,3,opt,name=format,proto3,enum=bark.v1alpha1.database.SnapshotFormat" json:"format,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -555,6 +621,13 @@ func (x *CreateSnapshotRequest) GetDescription() string {
 		return x.Description
 	}
 	return ""
+}
+
+func (x *CreateSnapshotRequest) GetFormat() SnapshotFormat {
+	if x != nil {
+		return x.Format
+	}
+	return SnapshotFormat_SNAPSHOT_FORMAT_UNSPECIFIED
 }
 
 type CreateSnapshotResponse struct {
@@ -660,7 +733,9 @@ type GetSnapshotStatusResponse struct {
 	// Current progress of the snapshot operation.
 	Progress *OperationProgress `protobuf:"bytes,1,opt,name=progress,proto3" json:"progress,omitempty"`
 	// Snapshot identifier (populated once the snapshot is committed).
-	SnapshotId    string `protobuf:"bytes,2,opt,name=snapshot_id,json=snapshotId,proto3" json:"snapshot_id,omitempty"`
+	SnapshotId string `protobuf:"bytes,2,opt,name=snapshot_id,json=snapshotId,proto3" json:"snapshot_id,omitempty"`
+	// Representation selected for this snapshot.
+	Format        SnapshotFormat `protobuf:"varint,3,opt,name=format,proto3,enum=bark.v1alpha1.database.SnapshotFormat" json:"format,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -707,6 +782,13 @@ func (x *GetSnapshotStatusResponse) GetSnapshotId() string {
 		return x.SnapshotId
 	}
 	return ""
+}
+
+func (x *GetSnapshotStatusResponse) GetFormat() SnapshotFormat {
+	if x != nil {
+		return x.Format
+	}
+	return SnapshotFormat_SNAPSHOT_FORMAT_UNSPECIFIED
 }
 
 type ListSnapshotsRequest struct {
@@ -1935,7 +2017,7 @@ const file_v1alpha1_database_database_proto_rawDesc = "" +
 	"\n" +
 	"started_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tstartedAt\x12B\n" +
 	"\fcompleted_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampH\x00R\vcompletedAt\x88\x01\x01B\x0f\n" +
-	"\r_completed_at\"\xab\x02\n" +
+	"\r_completed_at\"\xeb\x02\n" +
 	"\fSnapshotInfo\x12\x1f\n" +
 	"\vsnapshot_id\x18\x01 \x01(\tR\n" +
 	"snapshotId\x12\x12\n" +
@@ -1947,20 +2029,23 @@ const file_v1alpha1_database_database_proto_rawDesc = "" +
 	"\bchecksum\x18\x06 \x01(\tR\bchecksum\x129\n" +
 	"\n" +
 	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12\x1a\n" +
-	"\blocation\x18\b \x01(\tR\blocation\"M\n" +
+	"\blocation\x18\b \x01(\tR\blocation\x12>\n" +
+	"\x06format\x18\t \x01(\x0e2&.bark.v1alpha1.database.SnapshotFormatR\x06format\"\x8d\x01\n" +
 	"\x15CreateSnapshotRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
-	"\vdescription\x18\x02 \x01(\tR\vdescription\"\\\n" +
+	"\vdescription\x18\x02 \x01(\tR\vdescription\x12>\n" +
+	"\x06format\x18\x03 \x01(\x0e2&.bark.v1alpha1.database.SnapshotFormatR\x06format\"\\\n" +
 	"\x16CreateSnapshotResponse\x12!\n" +
 	"\foperation_id\x18\x01 \x01(\tR\voperationId\x12\x1f\n" +
 	"\vsnapshot_id\x18\x02 \x01(\tR\n" +
 	"snapshotId\"=\n" +
 	"\x18GetSnapshotStatusRequest\x12!\n" +
-	"\foperation_id\x18\x01 \x01(\tR\voperationId\"\x83\x01\n" +
+	"\foperation_id\x18\x01 \x01(\tR\voperationId\"\xc3\x01\n" +
 	"\x19GetSnapshotStatusResponse\x12E\n" +
 	"\bprogress\x18\x01 \x01(\v2).bark.v1alpha1.database.OperationProgressR\bprogress\x12\x1f\n" +
 	"\vsnapshot_id\x18\x02 \x01(\tR\n" +
-	"snapshotId\"R\n" +
+	"snapshotId\x12>\n" +
+	"\x06format\x18\x03 \x01(\x0e2&.bark.v1alpha1.database.SnapshotFormatR\x06format\"R\n" +
 	"\x14ListSnapshotsRequest\x12\x1b\n" +
 	"\tpage_size\x18\x01 \x01(\rR\bpageSize\x12\x1d\n" +
 	"\n" +
@@ -2049,7 +2134,11 @@ const file_v1alpha1_database_database_proto_rawDesc = "" +
 	"\x17OPERATION_TYPE_SNAPSHOT\x10\x01\x12\x1a\n" +
 	"\x16OPERATION_TYPE_RESTORE\x10\x02\x12\x1b\n" +
 	"\x17OPERATION_TYPE_TRUNCATE\x10\x03\x12\x19\n" +
-	"\x15OPERATION_TYPE_VERIFY\x10\x042\xf9\f\n" +
+	"\x15OPERATION_TYPE_VERIFY\x10\x04*g\n" +
+	"\x0eSnapshotFormat\x12\x1f\n" +
+	"\x1bSNAPSHOT_FORMAT_UNSPECIFIED\x10\x00\x12\x1a\n" +
+	"\x16SNAPSHOT_FORMAT_NATIVE\x10\x01\x12\x18\n" +
+	"\x14SNAPSHOT_FORMAT_SCLS\x10\x022\xf9\f\n" +
 	"\x0fDatabaseService\x12o\n" +
 	"\x0eCreateSnapshot\x12-.bark.v1alpha1.database.CreateSnapshotRequest\x1a..bark.v1alpha1.database.CreateSnapshotResponse\x12x\n" +
 	"\x11GetSnapshotStatus\x120.bark.v1alpha1.database.GetSnapshotStatusRequest\x1a1.bark.v1alpha1.database.GetSnapshotStatusResponse\x12l\n" +
@@ -2079,102 +2168,106 @@ func file_v1alpha1_database_database_proto_rawDescGZIP() []byte {
 	return file_v1alpha1_database_database_proto_rawDescData
 }
 
-var file_v1alpha1_database_database_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_v1alpha1_database_database_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
 var file_v1alpha1_database_database_proto_msgTypes = make([]protoimpl.MessageInfo, 32)
 var file_v1alpha1_database_database_proto_goTypes = []any{
 	(OperationStatus)(0),                    // 0: bark.v1alpha1.database.OperationStatus
 	(OperationType)(0),                      // 1: bark.v1alpha1.database.OperationType
-	(*BlockRef)(nil),                        // 2: bark.v1alpha1.database.BlockRef
-	(*OperationProgress)(nil),               // 3: bark.v1alpha1.database.OperationProgress
-	(*OperationRecord)(nil),                 // 4: bark.v1alpha1.database.OperationRecord
-	(*SnapshotInfo)(nil),                    // 5: bark.v1alpha1.database.SnapshotInfo
-	(*CreateSnapshotRequest)(nil),           // 6: bark.v1alpha1.database.CreateSnapshotRequest
-	(*CreateSnapshotResponse)(nil),          // 7: bark.v1alpha1.database.CreateSnapshotResponse
-	(*GetSnapshotStatusRequest)(nil),        // 8: bark.v1alpha1.database.GetSnapshotStatusRequest
-	(*GetSnapshotStatusResponse)(nil),       // 9: bark.v1alpha1.database.GetSnapshotStatusResponse
-	(*ListSnapshotsRequest)(nil),            // 10: bark.v1alpha1.database.ListSnapshotsRequest
-	(*ListSnapshotsResponse)(nil),           // 11: bark.v1alpha1.database.ListSnapshotsResponse
-	(*DeleteSnapshotRequest)(nil),           // 12: bark.v1alpha1.database.DeleteSnapshotRequest
-	(*DeleteSnapshotResponse)(nil),          // 13: bark.v1alpha1.database.DeleteSnapshotResponse
-	(*VerifySnapshotRequest)(nil),           // 14: bark.v1alpha1.database.VerifySnapshotRequest
-	(*VerifySnapshotResponse)(nil),          // 15: bark.v1alpha1.database.VerifySnapshotResponse
-	(*RestoreRequest)(nil),                  // 16: bark.v1alpha1.database.RestoreRequest
-	(*RestoreResponse)(nil),                 // 17: bark.v1alpha1.database.RestoreResponse
-	(*GetRestoreStatusRequest)(nil),         // 18: bark.v1alpha1.database.GetRestoreStatusRequest
-	(*GetRestoreStatusResponse)(nil),        // 19: bark.v1alpha1.database.GetRestoreStatusResponse
-	(*ListAvailableSnapshotsRequest)(nil),   // 20: bark.v1alpha1.database.ListAvailableSnapshotsRequest
-	(*ListAvailableSnapshotsResponse)(nil),  // 21: bark.v1alpha1.database.ListAvailableSnapshotsResponse
-	(*TruncateRequest)(nil),                 // 22: bark.v1alpha1.database.TruncateRequest
-	(*TruncateResponse)(nil),                // 23: bark.v1alpha1.database.TruncateResponse
-	(*GetTruncateStatusRequest)(nil),        // 24: bark.v1alpha1.database.GetTruncateStatusRequest
-	(*GetTruncateStatusResponse)(nil),       // 25: bark.v1alpha1.database.GetTruncateStatusResponse
-	(*StreamOperationProgressRequest)(nil),  // 26: bark.v1alpha1.database.StreamOperationProgressRequest
-	(*StreamOperationProgressResponse)(nil), // 27: bark.v1alpha1.database.StreamOperationProgressResponse
-	(*GetOperationHistoryRequest)(nil),      // 28: bark.v1alpha1.database.GetOperationHistoryRequest
-	(*GetOperationHistoryResponse)(nil),     // 29: bark.v1alpha1.database.GetOperationHistoryResponse
-	(*GetDatabaseInfoRequest)(nil),          // 30: bark.v1alpha1.database.GetDatabaseInfoRequest
-	(*GetDatabaseInfoResponse)(nil),         // 31: bark.v1alpha1.database.GetDatabaseInfoResponse
-	(*CancelOperationRequest)(nil),          // 32: bark.v1alpha1.database.CancelOperationRequest
-	(*CancelOperationResponse)(nil),         // 33: bark.v1alpha1.database.CancelOperationResponse
-	(*timestamppb.Timestamp)(nil),           // 34: google.protobuf.Timestamp
+	(SnapshotFormat)(0),                     // 2: bark.v1alpha1.database.SnapshotFormat
+	(*BlockRef)(nil),                        // 3: bark.v1alpha1.database.BlockRef
+	(*OperationProgress)(nil),               // 4: bark.v1alpha1.database.OperationProgress
+	(*OperationRecord)(nil),                 // 5: bark.v1alpha1.database.OperationRecord
+	(*SnapshotInfo)(nil),                    // 6: bark.v1alpha1.database.SnapshotInfo
+	(*CreateSnapshotRequest)(nil),           // 7: bark.v1alpha1.database.CreateSnapshotRequest
+	(*CreateSnapshotResponse)(nil),          // 8: bark.v1alpha1.database.CreateSnapshotResponse
+	(*GetSnapshotStatusRequest)(nil),        // 9: bark.v1alpha1.database.GetSnapshotStatusRequest
+	(*GetSnapshotStatusResponse)(nil),       // 10: bark.v1alpha1.database.GetSnapshotStatusResponse
+	(*ListSnapshotsRequest)(nil),            // 11: bark.v1alpha1.database.ListSnapshotsRequest
+	(*ListSnapshotsResponse)(nil),           // 12: bark.v1alpha1.database.ListSnapshotsResponse
+	(*DeleteSnapshotRequest)(nil),           // 13: bark.v1alpha1.database.DeleteSnapshotRequest
+	(*DeleteSnapshotResponse)(nil),          // 14: bark.v1alpha1.database.DeleteSnapshotResponse
+	(*VerifySnapshotRequest)(nil),           // 15: bark.v1alpha1.database.VerifySnapshotRequest
+	(*VerifySnapshotResponse)(nil),          // 16: bark.v1alpha1.database.VerifySnapshotResponse
+	(*RestoreRequest)(nil),                  // 17: bark.v1alpha1.database.RestoreRequest
+	(*RestoreResponse)(nil),                 // 18: bark.v1alpha1.database.RestoreResponse
+	(*GetRestoreStatusRequest)(nil),         // 19: bark.v1alpha1.database.GetRestoreStatusRequest
+	(*GetRestoreStatusResponse)(nil),        // 20: bark.v1alpha1.database.GetRestoreStatusResponse
+	(*ListAvailableSnapshotsRequest)(nil),   // 21: bark.v1alpha1.database.ListAvailableSnapshotsRequest
+	(*ListAvailableSnapshotsResponse)(nil),  // 22: bark.v1alpha1.database.ListAvailableSnapshotsResponse
+	(*TruncateRequest)(nil),                 // 23: bark.v1alpha1.database.TruncateRequest
+	(*TruncateResponse)(nil),                // 24: bark.v1alpha1.database.TruncateResponse
+	(*GetTruncateStatusRequest)(nil),        // 25: bark.v1alpha1.database.GetTruncateStatusRequest
+	(*GetTruncateStatusResponse)(nil),       // 26: bark.v1alpha1.database.GetTruncateStatusResponse
+	(*StreamOperationProgressRequest)(nil),  // 27: bark.v1alpha1.database.StreamOperationProgressRequest
+	(*StreamOperationProgressResponse)(nil), // 28: bark.v1alpha1.database.StreamOperationProgressResponse
+	(*GetOperationHistoryRequest)(nil),      // 29: bark.v1alpha1.database.GetOperationHistoryRequest
+	(*GetOperationHistoryResponse)(nil),     // 30: bark.v1alpha1.database.GetOperationHistoryResponse
+	(*GetDatabaseInfoRequest)(nil),          // 31: bark.v1alpha1.database.GetDatabaseInfoRequest
+	(*GetDatabaseInfoResponse)(nil),         // 32: bark.v1alpha1.database.GetDatabaseInfoResponse
+	(*CancelOperationRequest)(nil),          // 33: bark.v1alpha1.database.CancelOperationRequest
+	(*CancelOperationResponse)(nil),         // 34: bark.v1alpha1.database.CancelOperationResponse
+	(*timestamppb.Timestamp)(nil),           // 35: google.protobuf.Timestamp
 }
 var file_v1alpha1_database_database_proto_depIdxs = []int32{
 	0,  // 0: bark.v1alpha1.database.OperationProgress.status:type_name -> bark.v1alpha1.database.OperationStatus
-	34, // 1: bark.v1alpha1.database.OperationProgress.started_at:type_name -> google.protobuf.Timestamp
-	34, // 2: bark.v1alpha1.database.OperationProgress.updated_at:type_name -> google.protobuf.Timestamp
-	34, // 3: bark.v1alpha1.database.OperationProgress.completed_at:type_name -> google.protobuf.Timestamp
+	35, // 1: bark.v1alpha1.database.OperationProgress.started_at:type_name -> google.protobuf.Timestamp
+	35, // 2: bark.v1alpha1.database.OperationProgress.updated_at:type_name -> google.protobuf.Timestamp
+	35, // 3: bark.v1alpha1.database.OperationProgress.completed_at:type_name -> google.protobuf.Timestamp
 	1,  // 4: bark.v1alpha1.database.OperationRecord.type:type_name -> bark.v1alpha1.database.OperationType
 	0,  // 5: bark.v1alpha1.database.OperationRecord.status:type_name -> bark.v1alpha1.database.OperationStatus
-	34, // 6: bark.v1alpha1.database.OperationRecord.started_at:type_name -> google.protobuf.Timestamp
-	34, // 7: bark.v1alpha1.database.OperationRecord.completed_at:type_name -> google.protobuf.Timestamp
-	2,  // 8: bark.v1alpha1.database.SnapshotInfo.tip:type_name -> bark.v1alpha1.database.BlockRef
-	34, // 9: bark.v1alpha1.database.SnapshotInfo.created_at:type_name -> google.protobuf.Timestamp
-	3,  // 10: bark.v1alpha1.database.GetSnapshotStatusResponse.progress:type_name -> bark.v1alpha1.database.OperationProgress
-	5,  // 11: bark.v1alpha1.database.ListSnapshotsResponse.snapshots:type_name -> bark.v1alpha1.database.SnapshotInfo
-	34, // 12: bark.v1alpha1.database.DeleteSnapshotResponse.deleted_at:type_name -> google.protobuf.Timestamp
-	3,  // 13: bark.v1alpha1.database.GetRestoreStatusResponse.progress:type_name -> bark.v1alpha1.database.OperationProgress
-	5,  // 14: bark.v1alpha1.database.ListAvailableSnapshotsResponse.snapshots:type_name -> bark.v1alpha1.database.SnapshotInfo
-	2,  // 15: bark.v1alpha1.database.TruncateRequest.target:type_name -> bark.v1alpha1.database.BlockRef
-	3,  // 16: bark.v1alpha1.database.GetTruncateStatusResponse.progress:type_name -> bark.v1alpha1.database.OperationProgress
-	3,  // 17: bark.v1alpha1.database.StreamOperationProgressResponse.progress:type_name -> bark.v1alpha1.database.OperationProgress
-	1,  // 18: bark.v1alpha1.database.GetOperationHistoryRequest.type_filter:type_name -> bark.v1alpha1.database.OperationType
-	0,  // 19: bark.v1alpha1.database.GetOperationHistoryRequest.status_filter:type_name -> bark.v1alpha1.database.OperationStatus
-	4,  // 20: bark.v1alpha1.database.GetOperationHistoryResponse.records:type_name -> bark.v1alpha1.database.OperationRecord
-	2,  // 21: bark.v1alpha1.database.GetDatabaseInfoResponse.tip:type_name -> bark.v1alpha1.database.BlockRef
-	0,  // 22: bark.v1alpha1.database.CancelOperationResponse.status:type_name -> bark.v1alpha1.database.OperationStatus
-	6,  // 23: bark.v1alpha1.database.DatabaseService.CreateSnapshot:input_type -> bark.v1alpha1.database.CreateSnapshotRequest
-	8,  // 24: bark.v1alpha1.database.DatabaseService.GetSnapshotStatus:input_type -> bark.v1alpha1.database.GetSnapshotStatusRequest
-	10, // 25: bark.v1alpha1.database.DatabaseService.ListSnapshots:input_type -> bark.v1alpha1.database.ListSnapshotsRequest
-	12, // 26: bark.v1alpha1.database.DatabaseService.DeleteSnapshot:input_type -> bark.v1alpha1.database.DeleteSnapshotRequest
-	14, // 27: bark.v1alpha1.database.DatabaseService.VerifySnapshot:input_type -> bark.v1alpha1.database.VerifySnapshotRequest
-	16, // 28: bark.v1alpha1.database.DatabaseService.Restore:input_type -> bark.v1alpha1.database.RestoreRequest
-	18, // 29: bark.v1alpha1.database.DatabaseService.GetRestoreStatus:input_type -> bark.v1alpha1.database.GetRestoreStatusRequest
-	20, // 30: bark.v1alpha1.database.DatabaseService.ListAvailableSnapshots:input_type -> bark.v1alpha1.database.ListAvailableSnapshotsRequest
-	22, // 31: bark.v1alpha1.database.DatabaseService.Truncate:input_type -> bark.v1alpha1.database.TruncateRequest
-	24, // 32: bark.v1alpha1.database.DatabaseService.GetTruncateStatus:input_type -> bark.v1alpha1.database.GetTruncateStatusRequest
-	26, // 33: bark.v1alpha1.database.DatabaseService.StreamOperationProgress:input_type -> bark.v1alpha1.database.StreamOperationProgressRequest
-	28, // 34: bark.v1alpha1.database.DatabaseService.GetOperationHistory:input_type -> bark.v1alpha1.database.GetOperationHistoryRequest
-	30, // 35: bark.v1alpha1.database.DatabaseService.GetDatabaseInfo:input_type -> bark.v1alpha1.database.GetDatabaseInfoRequest
-	32, // 36: bark.v1alpha1.database.DatabaseService.CancelOperation:input_type -> bark.v1alpha1.database.CancelOperationRequest
-	7,  // 37: bark.v1alpha1.database.DatabaseService.CreateSnapshot:output_type -> bark.v1alpha1.database.CreateSnapshotResponse
-	9,  // 38: bark.v1alpha1.database.DatabaseService.GetSnapshotStatus:output_type -> bark.v1alpha1.database.GetSnapshotStatusResponse
-	11, // 39: bark.v1alpha1.database.DatabaseService.ListSnapshots:output_type -> bark.v1alpha1.database.ListSnapshotsResponse
-	13, // 40: bark.v1alpha1.database.DatabaseService.DeleteSnapshot:output_type -> bark.v1alpha1.database.DeleteSnapshotResponse
-	15, // 41: bark.v1alpha1.database.DatabaseService.VerifySnapshot:output_type -> bark.v1alpha1.database.VerifySnapshotResponse
-	17, // 42: bark.v1alpha1.database.DatabaseService.Restore:output_type -> bark.v1alpha1.database.RestoreResponse
-	19, // 43: bark.v1alpha1.database.DatabaseService.GetRestoreStatus:output_type -> bark.v1alpha1.database.GetRestoreStatusResponse
-	21, // 44: bark.v1alpha1.database.DatabaseService.ListAvailableSnapshots:output_type -> bark.v1alpha1.database.ListAvailableSnapshotsResponse
-	23, // 45: bark.v1alpha1.database.DatabaseService.Truncate:output_type -> bark.v1alpha1.database.TruncateResponse
-	25, // 46: bark.v1alpha1.database.DatabaseService.GetTruncateStatus:output_type -> bark.v1alpha1.database.GetTruncateStatusResponse
-	27, // 47: bark.v1alpha1.database.DatabaseService.StreamOperationProgress:output_type -> bark.v1alpha1.database.StreamOperationProgressResponse
-	29, // 48: bark.v1alpha1.database.DatabaseService.GetOperationHistory:output_type -> bark.v1alpha1.database.GetOperationHistoryResponse
-	31, // 49: bark.v1alpha1.database.DatabaseService.GetDatabaseInfo:output_type -> bark.v1alpha1.database.GetDatabaseInfoResponse
-	33, // 50: bark.v1alpha1.database.DatabaseService.CancelOperation:output_type -> bark.v1alpha1.database.CancelOperationResponse
-	37, // [37:51] is the sub-list for method output_type
-	23, // [23:37] is the sub-list for method input_type
-	23, // [23:23] is the sub-list for extension type_name
-	23, // [23:23] is the sub-list for extension extendee
-	0,  // [0:23] is the sub-list for field type_name
+	35, // 6: bark.v1alpha1.database.OperationRecord.started_at:type_name -> google.protobuf.Timestamp
+	35, // 7: bark.v1alpha1.database.OperationRecord.completed_at:type_name -> google.protobuf.Timestamp
+	3,  // 8: bark.v1alpha1.database.SnapshotInfo.tip:type_name -> bark.v1alpha1.database.BlockRef
+	35, // 9: bark.v1alpha1.database.SnapshotInfo.created_at:type_name -> google.protobuf.Timestamp
+	2,  // 10: bark.v1alpha1.database.SnapshotInfo.format:type_name -> bark.v1alpha1.database.SnapshotFormat
+	2,  // 11: bark.v1alpha1.database.CreateSnapshotRequest.format:type_name -> bark.v1alpha1.database.SnapshotFormat
+	4,  // 12: bark.v1alpha1.database.GetSnapshotStatusResponse.progress:type_name -> bark.v1alpha1.database.OperationProgress
+	2,  // 13: bark.v1alpha1.database.GetSnapshotStatusResponse.format:type_name -> bark.v1alpha1.database.SnapshotFormat
+	6,  // 14: bark.v1alpha1.database.ListSnapshotsResponse.snapshots:type_name -> bark.v1alpha1.database.SnapshotInfo
+	35, // 15: bark.v1alpha1.database.DeleteSnapshotResponse.deleted_at:type_name -> google.protobuf.Timestamp
+	4,  // 16: bark.v1alpha1.database.GetRestoreStatusResponse.progress:type_name -> bark.v1alpha1.database.OperationProgress
+	6,  // 17: bark.v1alpha1.database.ListAvailableSnapshotsResponse.snapshots:type_name -> bark.v1alpha1.database.SnapshotInfo
+	3,  // 18: bark.v1alpha1.database.TruncateRequest.target:type_name -> bark.v1alpha1.database.BlockRef
+	4,  // 19: bark.v1alpha1.database.GetTruncateStatusResponse.progress:type_name -> bark.v1alpha1.database.OperationProgress
+	4,  // 20: bark.v1alpha1.database.StreamOperationProgressResponse.progress:type_name -> bark.v1alpha1.database.OperationProgress
+	1,  // 21: bark.v1alpha1.database.GetOperationHistoryRequest.type_filter:type_name -> bark.v1alpha1.database.OperationType
+	0,  // 22: bark.v1alpha1.database.GetOperationHistoryRequest.status_filter:type_name -> bark.v1alpha1.database.OperationStatus
+	5,  // 23: bark.v1alpha1.database.GetOperationHistoryResponse.records:type_name -> bark.v1alpha1.database.OperationRecord
+	3,  // 24: bark.v1alpha1.database.GetDatabaseInfoResponse.tip:type_name -> bark.v1alpha1.database.BlockRef
+	0,  // 25: bark.v1alpha1.database.CancelOperationResponse.status:type_name -> bark.v1alpha1.database.OperationStatus
+	7,  // 26: bark.v1alpha1.database.DatabaseService.CreateSnapshot:input_type -> bark.v1alpha1.database.CreateSnapshotRequest
+	9,  // 27: bark.v1alpha1.database.DatabaseService.GetSnapshotStatus:input_type -> bark.v1alpha1.database.GetSnapshotStatusRequest
+	11, // 28: bark.v1alpha1.database.DatabaseService.ListSnapshots:input_type -> bark.v1alpha1.database.ListSnapshotsRequest
+	13, // 29: bark.v1alpha1.database.DatabaseService.DeleteSnapshot:input_type -> bark.v1alpha1.database.DeleteSnapshotRequest
+	15, // 30: bark.v1alpha1.database.DatabaseService.VerifySnapshot:input_type -> bark.v1alpha1.database.VerifySnapshotRequest
+	17, // 31: bark.v1alpha1.database.DatabaseService.Restore:input_type -> bark.v1alpha1.database.RestoreRequest
+	19, // 32: bark.v1alpha1.database.DatabaseService.GetRestoreStatus:input_type -> bark.v1alpha1.database.GetRestoreStatusRequest
+	21, // 33: bark.v1alpha1.database.DatabaseService.ListAvailableSnapshots:input_type -> bark.v1alpha1.database.ListAvailableSnapshotsRequest
+	23, // 34: bark.v1alpha1.database.DatabaseService.Truncate:input_type -> bark.v1alpha1.database.TruncateRequest
+	25, // 35: bark.v1alpha1.database.DatabaseService.GetTruncateStatus:input_type -> bark.v1alpha1.database.GetTruncateStatusRequest
+	27, // 36: bark.v1alpha1.database.DatabaseService.StreamOperationProgress:input_type -> bark.v1alpha1.database.StreamOperationProgressRequest
+	29, // 37: bark.v1alpha1.database.DatabaseService.GetOperationHistory:input_type -> bark.v1alpha1.database.GetOperationHistoryRequest
+	31, // 38: bark.v1alpha1.database.DatabaseService.GetDatabaseInfo:input_type -> bark.v1alpha1.database.GetDatabaseInfoRequest
+	33, // 39: bark.v1alpha1.database.DatabaseService.CancelOperation:input_type -> bark.v1alpha1.database.CancelOperationRequest
+	8,  // 40: bark.v1alpha1.database.DatabaseService.CreateSnapshot:output_type -> bark.v1alpha1.database.CreateSnapshotResponse
+	10, // 41: bark.v1alpha1.database.DatabaseService.GetSnapshotStatus:output_type -> bark.v1alpha1.database.GetSnapshotStatusResponse
+	12, // 42: bark.v1alpha1.database.DatabaseService.ListSnapshots:output_type -> bark.v1alpha1.database.ListSnapshotsResponse
+	14, // 43: bark.v1alpha1.database.DatabaseService.DeleteSnapshot:output_type -> bark.v1alpha1.database.DeleteSnapshotResponse
+	16, // 44: bark.v1alpha1.database.DatabaseService.VerifySnapshot:output_type -> bark.v1alpha1.database.VerifySnapshotResponse
+	18, // 45: bark.v1alpha1.database.DatabaseService.Restore:output_type -> bark.v1alpha1.database.RestoreResponse
+	20, // 46: bark.v1alpha1.database.DatabaseService.GetRestoreStatus:output_type -> bark.v1alpha1.database.GetRestoreStatusResponse
+	22, // 47: bark.v1alpha1.database.DatabaseService.ListAvailableSnapshots:output_type -> bark.v1alpha1.database.ListAvailableSnapshotsResponse
+	24, // 48: bark.v1alpha1.database.DatabaseService.Truncate:output_type -> bark.v1alpha1.database.TruncateResponse
+	26, // 49: bark.v1alpha1.database.DatabaseService.GetTruncateStatus:output_type -> bark.v1alpha1.database.GetTruncateStatusResponse
+	28, // 50: bark.v1alpha1.database.DatabaseService.StreamOperationProgress:output_type -> bark.v1alpha1.database.StreamOperationProgressResponse
+	30, // 51: bark.v1alpha1.database.DatabaseService.GetOperationHistory:output_type -> bark.v1alpha1.database.GetOperationHistoryResponse
+	32, // 52: bark.v1alpha1.database.DatabaseService.GetDatabaseInfo:output_type -> bark.v1alpha1.database.GetDatabaseInfoResponse
+	34, // 53: bark.v1alpha1.database.DatabaseService.CancelOperation:output_type -> bark.v1alpha1.database.CancelOperationResponse
+	40, // [40:54] is the sub-list for method output_type
+	26, // [26:40] is the sub-list for method input_type
+	26, // [26:26] is the sub-list for extension type_name
+	26, // [26:26] is the sub-list for extension extendee
+	0,  // [0:26] is the sub-list for field type_name
 }
 
 func init() { file_v1alpha1_database_database_proto_init() }
@@ -2192,7 +2285,7 @@ func file_v1alpha1_database_database_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1alpha1_database_database_proto_rawDesc), len(file_v1alpha1_database_database_proto_rawDesc)),
-			NumEnums:      2,
+			NumEnums:      3,
 			NumMessages:   32,
 			NumExtensions: 0,
 			NumServices:   1,
